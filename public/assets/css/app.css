@@ -1,0 +1,337 @@
+/*
+ * Rodeo Express — design system foundation (spec section 9).
+ *
+ * The three environmental facts in spec 1.2 drive everything here: users are
+ * outdoors in February weather, on a phone, with cold or gloved hands. So
+ * targets are large, contrast is high, nothing depends on hover, and the dark
+ * theme is a requirement rather than a nicety — a white screen at 02:00 on a
+ * dark tarmac destroys night vision.
+ *
+ * This file carries the tokens and the pieces the shipped screens use. Screen
+ * specific styles arrive with their screens.
+ */
+
+/* ---------------------------------------------------------------------------
+   Tokens
+   --------------------------------------------------------------------------- */
+
+:root {
+    /* Brand palette, spec 9.1. Contrast figures are against white. */
+    --rodeo-orange: #EF7622;  /* ~2.9:1 — accent only, never white text on it */
+    --action-orange: #B85416; /* ~4.9:1 — buttons, white text is fine */
+    --rodeo-brown: #7F5E46;   /* ~5.9:1 — body text, icons */
+    --rodeo-dust: #C9B29B;    /* surfaces and borders, never text */
+    --dust-light: #F2EAE2;    /* page and callout surfaces */
+    --ink: #2B2018;           /* ~14:1 — primary text, and text on orange */
+
+    /* Semantic tokens. Screens use these, not the palette above, so the dark
+       theme is a matter of redefining a dozen values. */
+    --surface: #FFFFFF;
+    --surface-raised: var(--dust-light);
+    --surface-sunken: #E7DACE;
+    --border: var(--rodeo-dust);
+    --text: var(--ink);
+    --text-muted: var(--rodeo-brown);
+    --accent: var(--rodeo-orange);
+    --accent-text: var(--ink);
+    --action-bg: var(--action-orange);
+    --action-text: #FFFFFF;
+
+    /* Status colours. Checked in and checked out must be tellable apart at
+       arm's length in sunlight, and not by hue alone — every use pairs them
+       with a word. */
+    --ok: #2F6B3A;
+    --ok-surface: #E4F0E5;
+    --warn: #8A5A00;
+    --warn-surface: #FBF0DA;
+    --danger: #A32B1C;
+    --danger-surface: #F8E3DF;
+
+    /* Touch and type, spec 9.3. */
+    --touch-min: 56px;      /* every interactive target */
+    --touch-primary: 64px;  /* primary actions and the PIN keypad */
+    --touch-gap: 8px;       /* so a mis-tap does not hit the wrong control */
+    --tile-height: 72px;    /* main menu tiles */
+    --font-status: 1.3rem;  /* assignment names and status values, 22px+ */
+    --radius: 10px;
+    --page-max: 34rem;      /* a phone column, centred on a desktop */
+}
+
+/* Dark theme. Follows the device by default; Tools sets data-theme to pin it.
+   A warm near-black rather than a neutral one, with Rodeo Orange kept as the
+   accent (spec 9.2). */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --surface: #14100D;
+        --surface-raised: #1F1813;
+        --surface-sunken: #0D0A08;
+        --border: #3D3128;
+        --text: #F6EFE8;
+        --text-muted: #C9B29B;
+        --accent: #EF7622;
+        --accent-text: #14100D;
+
+        /* On a dark surface the brand orange clears contrast comfortably with
+           dark text on top, so primary actions use it directly. */
+        --action-bg: #EF7622;
+        --action-text: #14100D;
+
+        --ok: #7BD48C;
+        --ok-surface: #16241A;
+        --warn: #E8B45C;
+        --warn-surface: #2A2012;
+        --danger: #FF9385;
+        --danger-surface: #2E1512;
+    }
+}
+
+:root[data-theme="dark"] {
+    --surface: #14100D;
+    --surface-raised: #1F1813;
+    --surface-sunken: #0D0A08;
+    --border: #3D3128;
+    --text: #F6EFE8;
+    --text-muted: #C9B29B;
+    --accent: #EF7622;
+    --accent-text: #14100D;
+    --action-bg: #EF7622;
+    --action-text: #14100D;
+    --ok: #7BD48C;
+    --ok-surface: #16241A;
+    --warn: #E8B45C;
+    --warn-surface: #2A2012;
+    --danger: #FF9385;
+    --danger-surface: #2E1512;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+
+/* 106.25% is 17px at a default root size — the spec minimum — while still
+   respecting a larger browser default set by someone who needs one. Large Text
+   mode in Tools multiplies it. */
+html {
+    font-size: calc(106.25% * var(--text-scale, 1));
+    -webkit-text-size-adjust: 100%;
+}
+
+:root[data-text="large"] {
+    --text-scale: 1.25;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--surface);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+
+    /* Wet gloves and a scrolling list do not mix well with rubber-banding. */
+    overscroll-behavior-y: contain;
+}
+
+.page {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+h1, h2, h3 {
+    line-height: 1.2;
+    margin: 0 0 0.5rem;
+}
+
+h1 {
+    font-size: 1.6rem;
+}
+
+h2 {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+}
+
+p {
+    margin: 0 0 1rem;
+}
+
+a {
+    color: var(--action-bg);
+}
+
+/* No hover-dependent behaviour anywhere (spec 9.3) — hover does not exist on
+   the devices this runs on. Focus, however, must always be visible. */
+:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Components
+   -------------------------------------------------------------------------- */
+
+.masthead {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    border-bottom: 4px solid var(--accent);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.masthead__name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.masthead__sub {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: var(--touch-gap);
+}
+
+.card__label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.card__value {
+    font-size: var(--font-status);
+    font-weight: 600;
+}
+
+.card__note {
+    margin: 0;
+}
+
+/* Full-width tiles: the main menu's single vertical column (spec 6.2). */
+.tile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: var(--tile-height);
+    margin-bottom: var(--touch-gap);
+    padding: 0.75rem 1rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-left: 6px solid var(--accent);
+    border-radius: var(--radius);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-min);
+    padding: 0 1.25rem;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--action-bg);
+    color: var(--action-text);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button--primary {
+    width: 100%;
+    min-height: var(--touch-primary);
+    font-size: 1.15rem;
+}
+
+.button--quiet {
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--border);
+}
+
+/* Status and freshness. A stale screen must never look live (spec 6.3), so
+   these are always paired with words, never colour alone. */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.badge--ok {
+    background: var(--ok-surface);
+    color: var(--ok);
+}
+
+.badge--warn {
+    background: var(--warn-surface);
+    color: var(--warn);
+}
+
+.badge--danger {
+    background: var(--danger-surface);
+    color: var(--danger);
+}
+
+.notice {
+    border: 1px solid var(--border);
+    border-left: 6px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.875rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
+.checks {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.checks th,
+.checks td {
+    text-align: left;
+    padding: 0.5rem 0.5rem 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.checks th {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.footnote {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
