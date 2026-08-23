@@ -4,6 +4,9 @@
 Ahosting Reseller Gold — cPanel, LiteSpeed (LSAPI), CloudLinux+CageFS.
 PHP 8.x, MySQL. NO Node build step. NO Composer deps unless unavoidable.
 Code deploys by file copy — nothing may require a build to run.
+Server sh193 · cPanel 136.0 · MariaDB 10.11.18 (cll-lve) · EL9 · x86_64.
+cPanel reports Apache 2.4.68, not LiteSpeed — confirm the handler before
+relying on server-specific behaviour. Full snapshot: docs/hosting.md
 Live URL: https://www.reshiftmanager.com/resm/
 The app is served from the /resm/ subpath, not the domain root — public/ maps
 to public_html/resm/. Never hard-code site-root paths: every internal link,
