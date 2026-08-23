@@ -5,8 +5,9 @@ Ahosting Reseller Gold — cPanel, LiteSpeed (LSAPI), CloudLinux+CageFS.
 PHP 8.x, MySQL. NO Node build step. NO Composer deps unless unavoidable.
 Code deploys by file copy — nothing may require a build to run.
 Server sh193 · cPanel 136.0 · MariaDB 10.11.18 (cll-lve) · EL9 · x86_64.
-LiteSpeed confirmed by response header — cPanel's "Apache 2.4.68" is the
-config LSWS reads, not the server. Full snapshot: docs/hosting.md
+LiteSpeed/LSAPI confirmed (SAPI reports `litespeed`); cPanel's "Apache 2.4.68"
+is the config LSWS reads, not the server. PHP 8.2.33. No OPcache, no intl,
+no sodium. Full runtime measurements: docs/hosting.md
 Live URL: https://www.reshiftmanager.com/resm/
 The app is served from the /resm/ subpath, not the domain root — public/ maps
 to public_html/resm/. Never hard-code site-root paths: every internal link,
@@ -16,9 +17,18 @@ from a configured base path of /resm/.
 ## Hard constraints
 - No WebSockets or SSE — CloudLinux LVE caps entry processes. Polling only.
 - No localStorage for auth state. Sessions are HttpOnly cookies.
+  Host defaults are unsafe — cookie_httponly, cookie_secure, samesite and
+  use_strict_mode are all off, and cookie_path is /. Set every one explicitly
+  before session_start(); path must be /resm/.
+- The 90-day "keep me signed in" cannot be a PHP session (gc_maxlifetime is
+  1440s and GC is not ours on shared hosting). Use a DB-backed rotating token.
 - Every DB call via PDO prepared statements. No string-built SQL, ever.
 - Role + team scope enforced server-side on EVERY request.
 - app/ is never web-accessible. Only public/ ships to public_html.
+  DOCUMENT_ROOT is /home/reshiftmanager/public_html and the app lives at
+  public_html/resm/, so app/ must sit OUTSIDE public_html entirely — a
+  sibling like /home/reshiftmanager/resm-app/, reached by filesystem path.
+- Server dirs 0755, files 0644. A 0700 dir yields 404, not 403.
 
 ## Design system
 Rodeo Orange #EF7622 (accent only — 2.9:1 on white, never white text on it)

@@ -89,3 +89,127 @@ Practical consequences:
 - LSAPI keeps PHP workers alive between requests, so `opcache` and any
   process-level state persist across requests within a worker's lifetime.
   A file-copy deploy may not take effect until opcache revalidates.
+
+## PHP runtime — measured 2026-08-23
+
+Read from a temporary diagnostic script at `public_html/resm/`, since cPanel's
+Server Information panel reports no PHP details. The script was removed after.
+
+| | |
+| --- | --- |
+| PHP version | 8.2.33 |
+| SAPI | `litespeed` — LSAPI confirmed, matching the LiteSpeed finding above |
+| `SERVER_SOFTWARE` | LiteSpeed |
+| Document root | `/home/reshiftmanager/public_html` |
+| App directory | `/home/reshiftmanager/public_html/resm` |
+| TLS | `HTTPS=on`, port 443 |
+| Timezone | UTC |
+| Error log | `/home/reshiftmanager/logs/php.error.log` (`display_errors` off, `log_errors` on) |
+
+### Where application code must live
+
+`DOCUMENT_ROOT` is `public_html` itself, and the app sits one level inside it at
+`public_html/resm/`. Everything under `public_html` is therefore web-reachable,
+including anything placed beside `resm/`. To satisfy the rule that `app/` is
+never web-accessible, non-public code has to live **outside** `public_html`
+entirely — a sibling such as `/home/reshiftmanager/resm-app/` — and be reached
+by filesystem path from `public_html/resm/`. Putting `app/` inside `resm/` and
+relying on `.htaccess` to hide it is strictly weaker and easy to get wrong.
+
+### Extensions
+
+Present: `pdo`, `pdo_mysql`, `mysqlnd`, `mbstring`, `json`, `openssl`,
+`session`, `curl`, `fileinfo`, `zip`, `gd`.
+
+Absent, and worth knowing before writing code against them:
+
+- **`intl` — not available.** No `IntlDateFormatter`, `NumberFormatter` or
+  `Collator`. Format dates and times with `DateTime`/`DateTimeImmutable` and
+  `IntlChar`-free code.
+- **`sodium` — not available.** No `sodium_crypto_*`. Use `random_bytes()` for
+  token generation and `hash_hmac()`/`hash_equals()` for signing and
+  comparison; both are core and always present.
+- **OPcache — not installed.** Two consequences, one good and one not: a
+  file-copy deploy takes effect on the very next request with no revalidation
+  lag, and every request recompiles every PHP file it touches. Worth asking
+  the host to enable `ea-php82-php-opcache` before the season; if it is
+  enabled later, `opcache.validate_timestamps` becomes a deploy concern.
+
+### Password and PIN hashing
+
+`bcrypt`, `argon2i` and `argon2id` are all available; `PASSWORD_DEFAULT` is
+bcrypt (`2y`).
+
+Argon2id is the stronger algorithm but its PHP default `memory_cost` is 64 MB
+**per hash operation**, against a `memory_limit` of 128 MB and a CloudLinux LVE
+cap on the account as a whole. Shift start is precisely when 25–100 people log
+in within a few minutes, so concurrent hash verifications are the expected
+case, not the edge case. Either use bcrypt at cost 11–12, or argon2id with
+`memory_cost` reduced to 16–32 MB. Measure before committing to a value.
+
+Note separately that a numeric PIN is low-entropy whatever the hash: rate
+limiting and lockout do the real work here, and the hash only protects the
+database if it leaks.
+
+### Session configuration — defaults are unsafe, override every one
+
+The stock settings on this host conflict with the spec in five places:
+
+| Setting | Host default | Required |
+| --- | --- | --- |
+| `session.cookie_httponly` | **off** | on — the spec mandates HttpOnly |
+| `session.cookie_secure` | **0** | 1 — the site is HTTPS-only |
+| `session.cookie_samesite` | **unset** | `Lax` |
+| `session.cookie_path` | **`/`** | `/resm/` — scope the cookie to the app |
+| `session.use_strict_mode` | **0** | 1 — rejects attacker-supplied session ids |
+
+Set them explicitly with `session_set_cookie_params()` and `ini_set()` before
+`session_start()`; do not rely on host configuration, which can change under
+you on a shared box.
+
+`session.save_path` is `/var/cpanel/php/sessions/ea-php82`, a cPanel-wide
+directory. CageFS isolates accounts from each other, but pointing the app at a
+private path outside the document root is cheap insurance and makes the
+lifetime ours to control.
+
+### The 90-day session cannot be a PHP session
+
+`session.gc_maxlifetime` is 1440 seconds — 24 minutes. The spec's "keep me
+signed in" issues a 90-day rolling session, and no PHP session will survive
+that: garbage collection on a shared host is not ours to govern, and raising
+`gc_maxlifetime` on a shared save path does not reliably extend anything.
+
+Implement persistent login as a separate DB-backed token: a random
+`random_bytes(32)` selector plus verifier, stored hashed, in a long-lived
+cookie scoped to `/resm/` with `HttpOnly`, `Secure` and `SameSite=Lax`,
+rotated on each use. The PHP session then stays short and carries only the
+live request's identity.
+
+### Limits
+
+| Setting | Value | Relevance |
+| --- | --- | --- |
+| `memory_limit` | 128M | Interacts with argon2id above |
+| `max_execution_time` | 30s | Roster imports must stay well inside it |
+| `post_max_size` | 8M | |
+| `upload_max_filesize` | 2M | Fine for a roster CSV and an SVG site map |
+| `max_input_vars` | **1000** | A bulk form posting all 98 positions at once can exceed this, and PHP **truncates silently** — no error, just missing fields. Assign per-position, or chunk the form |
+| `default_charset` | UTF-8 | |
+
+### Time
+
+`date.timezone` is UTC. Store and compare in UTC; convert to
+`America/Chicago` only for display. Houston observes DST, so a shift crossing
+02:00 in March needs the conversion done with a real timezone, never a fixed
+offset.
+
+### File permissions on this host
+
+Directories **0755**, files **0644**. `public_html` itself is cPanel's
+`0750` and should be left alone.
+
+A directory at 0700 produces a **404, not a 403**, on files inside it — the
+web server cannot traverse in, and LiteSpeed declines to reveal whether the
+target exists. This cost an hour once; if a file you can see in File Manager
+404s, check the directory's mode first. Watch what modes arrive after a
+cPanel "Deploy HEAD Commit".
