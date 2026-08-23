@@ -12,7 +12,8 @@ paths) only change on a host upgrade.
 | Hosting package | 3000 |
 | Server name | sh193 |
 | cPanel version | 136.0 (build 35) |
-| Apache version | 2.4.68 |
+| Web server | **LiteSpeed** (confirmed via `Server:` response header) |
+| Apache version reported by cPanel | 2.4.68 — the Apache config LSWS reads, not the running server |
 | Database | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) |
 | Architecture | x86_64 |
 | Operating system | linux |
@@ -21,9 +22,11 @@ paths) only change on a host upgrade.
 | Perl | 5.32.1 (`/usr/bin/perl`) |
 | Sendmail | `/usr/sbin/sendmail` |
 
-Not reported by this panel and still to be confirmed: the **PHP version and
-handler**. `CLAUDE.md` assumes PHP 8.x — check cPanel → MultiPHP Manager for
-the version actually bound to the domain, and MultiPHP INI Editor for limits.
+Not reported by this panel and still to be confirmed: the **PHP version**.
+`CLAUDE.md` assumes PHP 8.x — check cPanel → MultiPHP Manager for the version
+bound to the domain, and MultiPHP INI Editor for limits. The handler is
+expected to be LSAPI (`lsphp`) given LiteSpeed; `phpinfo()`'s **Server API**
+row reads `litespeed` when that is so.
 
 ## What this constrains in the code
 
@@ -51,10 +54,8 @@ Every other monitored service was up: `cpanel_php_fpm`, `cpanellogd`, `cpdavd`,
 `mysql` (10.11.18-MariaDB-cll-lve), `named`, `nscd`, `p0f`, `pop`,
 `queueprocd`, `rsyslogd`, `spamd`, `sshd`.
 
-`apache_php_fpm` down is commonly benign on a shared box — cPanel reports it
-that way when no domain on the server is configured to use PHP-FPM. It matters
-only if this app is meant to run under PHP-FPM; if pages 500 or PHP fails to
-execute, check this first.
+`apache_php_fpm` down is expected here, not a fault: LiteSpeed runs PHP through
+LSAPI, so Apache's PHP-FPM has nothing to serve. Do not "fix" it.
 
 ## Host capacity — snapshot 2026-08-23
 
@@ -65,11 +66,26 @@ These describe the shared host, not this account's LVE allowance. Account-level
 limits (entry processes, CPU, I/O, inodes) are the ones that will bite — read
 them from cPanel's **Resource Usage** page, not from here.
 
-## Open question: web server
+## Web server: LiteSpeed — resolved 2026-08-23
 
-cPanel reports **Apache 2.4.68** with `httpd` up, while `CLAUDE.md` describes
-the target as LiteSpeed with LSAPI. These are usually distinguishable: a
-LiteSpeed box normally lists an `lshttpd` service and reports Apache's version
-only for compatibility. Confirm which is serving before relying on either
-server's specific behaviour — it changes `.htaccess` handling, how PHP is
-invoked, and which performance directives do anything at all.
+`curl -sI https://www.reshiftmanager.com/resm/` returns `server: LiteSpeed`,
+confirming the LiteSpeed/LSAPI target described in `CLAUDE.md`.
+
+The cPanel panel reads as though this were Apache, and that is misleading in
+three places at once. LSWS is a drop-in Apache replacement: it parses Apache's
+`httpd.conf`, so cPanel reports **Apache 2.4.68** as the config version; it
+answers chkservd's service probe, so **`httpd` shows up**; and it serves PHP
+over LSAPI rather than Apache's FPM, which is why **`apache_php_fpm` is the one
+service reported down**. Read together the panel looks like Apache; the
+response header is what actually settles it.
+
+Practical consequences:
+
+- `.htaccess` is honoured — LSWS reads Apache-syntax rewrite rules — but
+  LiteSpeed-specific and mod_php-specific directives are not interchangeable.
+  Anything wrapped in `<IfModule mod_php*>` will never fire under LSAPI.
+- PHP settings go through `php.ini` / MultiPHP INI Editor, not `php_value`
+  lines in `.htaccess`, which LSAPI ignores.
+- LSAPI keeps PHP workers alive between requests, so `opcache` and any
+  process-level state persist across requests within a worker's lifetime.
+  A file-copy deploy may not take effect until opcache revalidates.
