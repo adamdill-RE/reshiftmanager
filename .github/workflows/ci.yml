@@ -21,23 +21,26 @@ jobs:
     runs-on: ubuntu-latest
     name: test (${{ matrix.db.name }})
 
-    # Both engines, because we do not know which one the server runs. cPanel's
-    # Server Information reports the database on the WEB server, and this
-    # account's database is on separate hardware, so that reading says nothing
-    # about the engine the application actually talks to.
+    # Production runs MySQL 8.0.41, measured against the real host. cPanel's
+    # Server Information reports MariaDB, but that describes the database on
+    # the WEB server, which this application never talks to.
     #
-    # This is not hypothetical. The schema used STORED generated columns, which
-    # MariaDB accepts alongside ON DELETE CASCADE and MySQL rejects outright
-    # with error 1215. A MariaDB-only pipeline passed it straight through to a
-    # server that could not create the table.
+    # Reading that panel as fact is not a hypothetical mistake. The schema used
+    # STORED generated columns, which MariaDB accepts alongside ON DELETE
+    # CASCADE and MySQL rejects outright with error 1215; a MariaDB-only
+    # pipeline passed it straight through to a server that could not create
+    # the table.
     strategy:
       fail-fast: false
       matrix:
         db:
-          - name: MariaDB 10.11
-            image: mariadb:10.11
+          # Production, measured: MySQL 8.0.41 (docs/hosting.md).
           - name: MySQL 8.0
             image: mysql:8.0
+          # Kept because it is nearly free, and the database host on a
+          # reseller plan is not ours to control.
+          - name: MariaDB 10.11
+            image: mariadb:10.11
 
     services:
       db:

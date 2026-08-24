@@ -14,7 +14,8 @@ paths) only change on a host upgrade.
 | cPanel version | 136.0 (build 35) |
 | Web server | **LiteSpeed** (confirmed via `Server:` response header) |
 | Apache version reported by cPanel | 2.4.68 — the Apache config LSWS reads, not the running server |
-| Database | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) — **this is the web server's MySQL, not the one the app uses**. See below. |
+| Database reported by cPanel | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) — the **web server's** instance, which the app never touches |
+| Database the app uses | **MySQL 8.0.41** at **152.160.193.196** — measured 2026-08-24. See below. |
 | Database host | **152.160.193.196** — a separate server, not this one. See below. |
 | Architecture | x86_64 |
 | Operating system | linux |
@@ -56,32 +57,34 @@ cost time before this was understood:
 The host to use is the one cPanel shows under **Remote MySQL** — an IP
 address here rather than a hostname.
 
-### The engine is therefore unknown — assume either
+### The engine is MySQL 8.0.41, not MariaDB — measured 2026-08-24
 
-Every version fact this panel reports about the database describes the MySQL
-running on the *web* server. The application never talks to that instance, so
-`10.11.18-MariaDB-cll-lve` says nothing about the engine behind
-152.160.193.196. It has not been measured.
+`SELECT VERSION()` from the application against the real host returns
+**8.0.41**. Every database version this cPanel panel reports describes the
+instance on the *web* server, which the application never talks to, so
+`10.11.18-MariaDB-cll-lve` was never a fact about this app's database. Reading
+it as one cost an evening.
 
-That is not a footnote. MariaDB and MySQL disagree on things this schema
-depends on, and the first one bit already: a column that a **STORED** generated
-column is computed from cannot carry `ON DELETE CASCADE` under MySQL — error
-1215, the table simply will not create — while MariaDB accepts it. The
-`assignment` table used exactly that shape, passed a MariaDB-only pipeline, and
-failed on the real server.
+The two engines disagree on things this schema depends on, and the first
+disagreement bit before anyone had measured anything: under MySQL a column that
+a **STORED** generated column is computed from cannot carry `ON DELETE
+CASCADE`. Error 1215, and the table simply will not create. MariaDB accepts the
+same shape. The `assignment` table used exactly that, passed a MariaDB-only
+pipeline, and failed on the real server.
 
-Both keys are now `VIRTUAL`, which both engines accept, and CI runs the whole
-suite against MariaDB 10.11 **and** MySQL 8.0. Until the real engine is
-measured, treat portability between the two as a requirement rather than a
-nicety. Reading `SELECT VERSION()` from the app against the real host would
-settle it.
+Both uniqueness keys are now `VIRTUAL`, which both engines accept. CI runs the
+whole suite against MySQL 8.0 **and** MariaDB 10.11 — MySQL because it is what
+production runs, MariaDB because it is nearly free to keep and this account
+sits on a reseller plan whose database host is not ours to control.
 
 ## What this constrains in the code
 
-- **MariaDB 10.11** supports CTEs, window functions, `JSON` functions and
-  `RETURNING`. It is not MySQL 8 — no `SELECT ... FOR UPDATE SKIP LOCKED`
-  before 10.6 (available here), and `utf8mb4` collation defaults differ.
-  Target `utf8mb4_unicode_ci` explicitly rather than relying on the default.
+- **MySQL 8.0** supports CTEs, window functions, `JSON` functions and
+  `SELECT ... FOR UPDATE SKIP LOCKED`. It has **no `RETURNING`** — that is a
+  MariaDB extension, so an insert that needs its own row back takes a second
+  statement. Collation defaults differ between the engines as well
+  (`utf8mb4_0900_ai_ci` here), which is why every table names
+  `utf8mb4_unicode_ci` explicitly and a test asserts it.
 - **`-cll-lve`** in the version string confirms CloudLinux LVE. Per-account
   entry-process and CPU caps are real: they are the reason the spec forbids
   WebSockets and SSE, and the reason polling intervals must stay modest.

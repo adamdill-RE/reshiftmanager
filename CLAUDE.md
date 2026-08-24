@@ -4,7 +4,9 @@
 Ahosting Reseller Gold — cPanel, LiteSpeed (LSAPI), CloudLinux+CageFS.
 PHP 8.x, MySQL. NO Node build step. NO Composer deps unless unavoidable.
 Code deploys by file copy — nothing may require a build to run.
-Server sh193 · cPanel 136.0 · MariaDB 10.11.18 (cll-lve) · EL9 · x86_64.
+Server sh193 · cPanel 136.0 · EL9 · x86_64.
+Database is MySQL 8.0.41 on a SEPARATE host (152.160.193.196), not the
+MariaDB cPanel reports — that one belongs to the web server. No RETURNING.
 LiteSpeed/LSAPI confirmed (SAPI reports `litespeed`); cPanel's "Apache 2.4.68"
 is the config LSWS reads, not the server. PHP 8.2.33. No OPcache, no intl,
 no sodium. Full runtime measurements: docs/hosting.md
