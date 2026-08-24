@@ -59,6 +59,21 @@ strictly weaker and easy to get wrong. `/status` checks this on every deploy.
 `public/` into `public_html/resm/` and the rest into `~/resm-app/`, then fixes
 modes to 0755/0644.
 
+### No shell access
+
+This account has neither SSH nor cPanel Terminal, so `bin/migrate.php` and
+`bin/set-admin-pin.php` cannot be reached. `/resm/setup` does both from a
+browser instead: it shows the database connection, applies pending migrations,
+and sets an administrator's PIN.
+
+It is guarded by `app.setup_key` in `config.local.php` rather than by a login,
+because before the migrations run there is no user table to log in against.
+Whoever holds that key can take the master admin account, so **remove the
+`setup_key` line once the app is running** — with no key configured the route
+does not exist, and that is the state to leave it in.
+
+The CLI scripts remain the better path wherever a shell is available.
+
 Migrations are **not** run automatically. Over SSH or cPanel Terminal:
 
 ```sh
