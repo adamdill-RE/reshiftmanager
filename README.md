@@ -67,6 +67,11 @@ php bin/migrate.php --status
 php bin/migrate.php
 ```
 
+`config.local.php` is the one file on the server the deploy does not own — it
+holds the database password, is not in git, and must survive every deploy. The
+deploy therefore never chmods `config/` recursively; it sets `config.php` and,
+if `config.local.php` is present, tightens it to 0600.
+
 Set a `status_key` in `config/config.local.php` (see
 `config.local.php.example`) and visit `/resm/status?key=…` afterwards. It
 reports the runtime, whether the session cookie really is HttpOnly/Secure/
