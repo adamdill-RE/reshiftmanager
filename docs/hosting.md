@@ -14,7 +14,7 @@ paths) only change on a host upgrade.
 | cPanel version | 136.0 (build 35) |
 | Web server | **LiteSpeed** (confirmed via `Server:` response header) |
 | Apache version reported by cPanel | 2.4.68 — the Apache config LSWS reads, not the running server |
-| Database | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) |
+| Database | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) — **this is the web server's MySQL, not the one the app uses**. See below. |
 | Database host | **152.160.193.196** — a separate server, not this one. See below. |
 | Architecture | x86_64 |
 | Operating system | linux |
@@ -55,6 +55,26 @@ cost time before this was understood:
 
 The host to use is the one cPanel shows under **Remote MySQL** — an IP
 address here rather than a hostname.
+
+### The engine is therefore unknown — assume either
+
+Every version fact this panel reports about the database describes the MySQL
+running on the *web* server. The application never talks to that instance, so
+`10.11.18-MariaDB-cll-lve` says nothing about the engine behind
+152.160.193.196. It has not been measured.
+
+That is not a footnote. MariaDB and MySQL disagree on things this schema
+depends on, and the first one bit already: a column that a **STORED** generated
+column is computed from cannot carry `ON DELETE CASCADE` under MySQL — error
+1215, the table simply will not create — while MariaDB accepts it. The
+`assignment` table used exactly that shape, passed a MariaDB-only pipeline, and
+failed on the real server.
+
+Both keys are now `VIRTUAL`, which both engines accept, and CI runs the whole
+suite against MariaDB 10.11 **and** MySQL 8.0. Until the real engine is
+measured, treat portability between the two as a requirement rather than a
+nicety. Reading `SELECT VERSION()` from the app against the real host would
+settle it.
 
 ## What this constrains in the code
 

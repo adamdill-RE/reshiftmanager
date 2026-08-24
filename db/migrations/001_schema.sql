@@ -415,14 +415,24 @@ CREATE TABLE assignment (
     is_multi       TINYINT(1)        NOT NULL DEFAULT 0,
     source         ENUM('manual','carry_forward','copy_previous') NOT NULL DEFAULT 'manual',
 
+    -- VIRTUAL, not STORED, and the difference is not cosmetic. MySQL refuses
+    -- ON DELETE CASCADE on any column that a STORED generated column is
+    -- computed from, and shift_id is computed into both keys below, so a
+    -- stored version of this table cannot be created at all -- error 1215,
+    -- Cannot add foreign key constraint. MariaDB permits it, which is how
+    -- this reached a server before anyone noticed.
+    --
+    -- Virtual costs nothing here: both columns are indexed, so the values are
+    -- materialised in the index where the uniqueness check reads them, and
+    -- nothing ever selects the columns themselves.
     current_person VARCHAR(64)
-        GENERATED ALWAYS AS (IF(is_current = 1, CONCAT_WS('|', shift_id, phase, user_id), NULL)) STORED,
+        GENERATED ALWAYS AS (IF(is_current = 1, CONCAT_WS('|', shift_id, phase, user_id), NULL)) VIRTUAL,
     current_slot   VARCHAR(64)
         GENERATED ALWAYS AS (
             IF(is_current = 1,
                CONCAT_WS('|', shift_id, phase, position_id, IF(is_multi = 1, user_id, '*')),
                NULL)
-        ) STORED,
+        ) VIRTUAL,
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_assignment_person (current_person),
