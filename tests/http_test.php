@@ -130,6 +130,49 @@ test('a missing required key is an error, not a silent null', function (): void 
     assertThrows(RuntimeException::class, static fn () => $config->require('app.not_a_key'));
 });
 
+test('an empty config.local.php is reported, not a blank page', function (): void {
+    // What actually happened on the server: File Manager saved a 0-byte file,
+    // require returned int(1), and merge() died with an uncaught TypeError.
+    // An administrator with no shell had nothing on screen to act on.
+    $dir = sys_get_temp_dir() . '/resm-cfg-' . bin2hex(random_bytes(4));
+    mkdir($dir);
+    copy(dirname(__DIR__) . '/config/config.php', $dir . '/config.php');
+    file_put_contents($dir . '/config.local.php', '');
+
+    try {
+        assertThrows(Resm\ConfigurationError::class, static fn () => Config::load($dir));
+
+        try {
+            Config::load($dir);
+        } catch (Resm\ConfigurationError $e) {
+            assertTrue(str_contains($e->getMessage(), 'config.local.php'), 'names the file');
+            assertTrue(str_contains($e->getMessage(), 'empty'), 'names the likely cause');
+        }
+    } finally {
+        @unlink($dir . '/config.php');
+        @unlink($dir . '/config.local.php');
+        @rmdir($dir);
+    }
+});
+
+test('a valid config.local.php still overrides normally', function (): void {
+    $dir = sys_get_temp_dir() . '/resm-cfg-' . bin2hex(random_bytes(4));
+    mkdir($dir);
+    copy(dirname(__DIR__) . '/config/config.php', $dir . '/config.php');
+    // Deliberately a key with no RESM_* mapping: the environment layer is
+    // applied after the local file and would otherwise win, which is by
+    // design and not what this test is about.
+    file_put_contents($dir . '/config.local.php', "<?php return ['app' => ['display_timezone' => 'America/Denver']];");
+
+    try {
+        assertSame('America/Denver', Config::load($dir)->string('app.display_timezone'));
+    } finally {
+        @unlink($dir . '/config.php');
+        @unlink($dir . '/config.local.php');
+        @rmdir($dir);
+    }
+});
+
 test('environment variables override the committed defaults', function (): void {
     putenv('RESM_BASE_PATH=/other/');
     putenv('RESM_SESSION_SECURE=false');
