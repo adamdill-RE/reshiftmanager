@@ -65,7 +65,18 @@
     });
 
     // A physical keyboard still works — useful for the Admin on a desktop.
+    //
+    // Bound to the form so it works wherever focus happens to be, which means
+    // it must decline anything typed into a field: a digit meant for Member ID
+    // bubbles up here too, and swallowing it made that field impossible to
+    // type into at all. Only paste got through, because paste is not a
+    // keydown.
     form.addEventListener('keydown', function (event) {
+        var target = event.target;
+        if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) {
+            return;
+        }
+
         if (event.key >= '0' && event.key <= '9') {
             event.preventDefault();
             press(event.key);
@@ -74,6 +85,12 @@
             press('back');
         }
     });
+
+    // With the PIN field hidden there is nothing between Member ID and the
+    // keypad buttons to represent PIN entry, so the dots become the focus
+    // stop. Tab out of Member ID and typed digits land in the PIN.
+    dots.tabIndex = 0;
+    dots.setAttribute('role', 'group');
 
     // Swap the number field for the keypad now that one exists.
     input.type = 'hidden';
