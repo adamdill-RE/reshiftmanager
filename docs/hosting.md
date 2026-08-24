@@ -15,6 +15,7 @@ paths) only change on a host upgrade.
 | Web server | **LiteSpeed** (confirmed via `Server:` response header) |
 | Apache version reported by cPanel | 2.4.68 — the Apache config LSWS reads, not the running server |
 | Database | MariaDB 10.11.18 (`10.11.18-MariaDB-cll-lve`) |
+| Database host | **152.160.193.196** — a separate server, not this one. See below. |
 | Architecture | x86_64 |
 | Operating system | linux |
 | Kernel | 5.14.0-570.19.1.el9_6.x86_64 (EL9 / CloudLinux) |
@@ -27,6 +28,33 @@ Not reported by this panel and still to be confirmed: the **PHP version**.
 bound to the domain, and MultiPHP INI Editor for limits. The handler is
 expected to be LSAPI (`lsphp`) given LiteSpeed; `phpinfo()`'s **Server API**
 row reads `litespeed` when that is so.
+
+## The database is on a different server — confirmed 2026-08-24
+
+`db.host` is **152.160.193.196**, not `localhost` and not `127.0.0.1`. Ahosting
+runs MySQL on separate hardware from the web server, which is invisible from
+cPanel's Databases pages: they read exactly as they would on a single-server
+account.
+
+Point the app at this machine instead and you reach a MySQL instance that is
+not yours. It answers:
+
+```
+SQLSTATE[HY000] [1524] Plugin 'unix_socket' is not loaded
+```
+
+That reads like a credentials problem and is not one. It is a different server
+refusing an account it has never heard of. Two things follow, both of which
+cost time before this was understood:
+
+- **No password reset will fix it.** MariaDB rejects `SET PASSWORD` outright
+  for an account whose plugin is `unix_socket`, so cPanel's Change Password
+  reports success while changing nothing.
+- **Neither will recreating the database user.** The account was never the
+  problem, and a new one on the same wrong server behaves identically.
+
+The host to use is the one cPanel shows under **Remote MySQL** — an IP
+address here rather than a hostname.
 
 ## What this constrains in the code
 

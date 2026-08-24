@@ -33,10 +33,9 @@ return [
     'db' => [
         // cPanel prefixes database and user names with the account name.
 
-        // NOT necessarily localhost. Ahosting runs the database on a separate
-        // server from the web server, so the hostname is the one cPanel shows
-        // under MySQL Databases / Remote MySQL - something like
-        // sqlNNN.ahosting.com, not this machine.
+        // NOT localhost, and NOT 127.0.0.1. Ahosting runs the database on
+        // separate hardware, and the address is an IP rather than a hostname -
+        // the one cPanel shows under Remote MySQL. See docs/hosting.md.
         //
         // Getting this wrong reaches the MySQL instance on the web server
         // instead, which answers:
@@ -47,7 +46,7 @@ return [
         // local instance refusing an account it does not have. Changing the
         // password cannot fix it, and MariaDB will not even let you try -
         // SET PASSWORD is rejected outright for a unix_socket account.
-        'host' => 'sqlNNN.ahosting.com',
+        'host' => '152.160.193.196',
         'name' => 'reshiftmanager_resm',
         'user' => 'reshiftmanager_resm',
         'pass' => '',

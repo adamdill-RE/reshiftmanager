@@ -83,8 +83,8 @@ php bin/migrate.php
 ```
 
 **The database is not on the web server.** Ahosting runs it separately, so
-`db.host` is the hostname cPanel shows under MySQL Databases, not `localhost`
-and not `127.0.0.1`. Point it at this machine and you reach a different MySQL
+`db.host` is the address cPanel shows under Remote MySQL — an IP rather than a
+hostname — not `localhost` and not `127.0.0.1`. Point it at this machine and you reach a different MySQL
 instance, which answers `SQLSTATE[HY000] [1524] Plugin 'unix_socket' is not
 loaded`. That reads like a credentials problem and is not one — it is the
 local instance refusing an account it has never heard of. No amount of
