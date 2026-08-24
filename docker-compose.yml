@@ -1,0 +1,67 @@
+# Local development environment.
+#
+# The layout deliberately mirrors the server rather than being convenient:
+# public/ is mounted inside the document root at /resm/, and the application
+# code is mounted at a sibling of the document root. So the subpath, and the
+# rule that app/ is not web-reachable, are exercised on every local request
+# instead of being discovered after a deploy.
+#
+#   docker compose up -d
+#   docker compose exec web php bin/migrate.php
+#   open http://localhost:8080/
+
+services:
+  web:
+    build: ./docker/php
+    working_dir: /var/www/resm-app
+    ports:
+      - "8080:80"
+    volumes:
+      # Application code — a sibling of /var/www/html, exactly as resm-app/ is
+      # a sibling of public_html on the server.
+      - .:/var/www/resm-app
+      # Public documents, mounted at the /resm/ subpath.
+      - ./public:/var/www/html/resm
+    environment:
+      RESM_DB_HOST: db
+      RESM_DB_NAME: resm
+      RESM_DB_USER: resm
+      RESM_DB_PASS: resm_dev
+
+      # Local development is plain http, so the session cookie cannot be
+      # Secure or the browser would never send it back. This is the one
+      # session setting that differs from production, and it is set here
+      # rather than defaulting to unsafe.
+      RESM_SESSION_SECURE: "0"
+
+      RESM_DEBUG: "1"
+      RESM_STATUS_KEY: local
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # 10.11 matches the server's MariaDB 10.11.18-cll-lve.
+    image: mariadb:10.11
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: resm
+      MARIADB_USER: resm
+      MARIADB_PASSWORD: resm_dev
+      MARIADB_ROOT_PASSWORD: root_dev
+    ports:
+      # Exposed on a non-default port so bin/migrate.php can also be run from
+      # the host, and so it cannot collide with a local MySQL.
+      - "3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  db-data:
