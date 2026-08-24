@@ -38,6 +38,24 @@ $adminLocked = $admin !== null && !str_starts_with((string) $admin['pin_hash'], 
     <p class="alert alert--error">
         Cannot connect: <?= e($state['dbError']) ?>
     </p>
+
+    <?php if ($state['dbDetail'] !== null): ?>
+        <div class="card">
+            <div class="card__label">What the database driver said</div>
+            <p class="card__note"><?= e($state['dbDetail']) ?></p>
+        </div>
+    <?php endif; ?>
+
+    <div class="card">
+        <div class="card__label">What the application is trying</div>
+        <p class="card__note"><?= e($state['dbTarget']) ?></p>
+        <p class="muted card__note">
+            user@host / database. If that is not what you set up, then
+            <code>config.local.php</code> is not being read and these are the
+            committed defaults.
+        </p>
+    </div>
+
     <p class="muted">
         Check the credentials in <code>config.local.php</code>. Nothing below
         will work until this connects.
