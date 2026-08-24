@@ -32,7 +32,22 @@ return [
 
     'db' => [
         // cPanel prefixes database and user names with the account name.
-        'host' => 'localhost',
+
+        // NOT necessarily localhost. Ahosting runs the database on a separate
+        // server from the web server, so the hostname is the one cPanel shows
+        // under MySQL Databases / Remote MySQL - something like
+        // sqlNNN.ahosting.com, not this machine.
+        //
+        // Getting this wrong reaches the MySQL instance on the web server
+        // instead, which answers:
+        //
+        //   SQLSTATE[HY000] [1524] Plugin 'unix_socket' is not loaded
+        //
+        // That error means the wrong server, not a wrong password: it is the
+        // local instance refusing an account it does not have. Changing the
+        // password cannot fix it, and MariaDB will not even let you try -
+        // SET PASSWORD is rejected outright for a unix_socket account.
+        'host' => 'sqlNNN.ahosting.com',
         'name' => 'reshiftmanager_resm',
         'user' => 'reshiftmanager_resm',
         'pass' => '',
