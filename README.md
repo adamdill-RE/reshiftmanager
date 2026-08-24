@@ -4,7 +4,7 @@ Manages the committeemen who run Rodeo Express bus operations: who is on the
 grounds, where each person is standing on the tarmac, and pushing that
 assignment to their phone the moment it changes.
 
-Server-rendered PHP 8 and MariaDB, no build step, deployed by file copy.
+Server-rendered PHP 8.2 and MySQL 8.0, no build step, deployed by file copy.
 `docs/spec-v2.md` is authoritative — read it before changing assignment logic.
 
 ## Getting started

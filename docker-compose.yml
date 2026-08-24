@@ -41,16 +41,19 @@ services:
         condition: service_healthy
 
   db:
-    # 10.11 matches the server's MariaDB 10.11.18-cll-lve.
-    image: mariadb:10.11
+    # MySQL 8.0, because that is what production runs: 8.0.41 on a separate
+    # host (docs/hosting.md). This used to be mariadb:10.11, copied from what
+    # cPanel reports about the WEB server, and the mismatch let a schema that
+    # MySQL cannot create pass every local check.
+    image: mysql:8.0
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     environment:
-      MARIADB_DATABASE: resm
-      MARIADB_USER: resm
-      MARIADB_PASSWORD: resm_dev
-      MARIADB_ROOT_PASSWORD: root_dev
+      MYSQL_DATABASE: resm
+      MYSQL_USER: resm
+      MYSQL_PASSWORD: resm_dev
+      MYSQL_ROOT_PASSWORD: root_dev
     ports:
       # Exposed on a non-default port so bin/migrate.php can also be run from
       # the host, and so it cannot collide with a local MySQL.
@@ -58,7 +61,7 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
       interval: 5s
       timeout: 5s
       retries: 20
