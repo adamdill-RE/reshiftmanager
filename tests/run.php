@@ -12,6 +12,11 @@ declare(strict_types=1);
  *
  *   php tests/run.php            run every test
  *   php tests/run.php sql        run files matching "sql"
+ *   php tests/run.php --strict   treat a skipped test as a failure
+ *
+ * --strict is what CI runs. Without it a missing database would skip the
+ * fourteen tests that matter most and the run would still report success —
+ * green, having checked nothing that touches MariaDB.
  */
 
 require __DIR__ . '/../app/bootstrap.php';
@@ -32,7 +37,7 @@ final class TestRunner
         self::$tests[] = ['name' => $name, 'fn' => $fn];
     }
 
-    public static function run(): int
+    public static function run(bool $strict = false): int
     {
         foreach (self::$tests as $test) {
             try {
@@ -64,6 +69,12 @@ final class TestRunner
             count(self::$skipped)
         );
         fwrite(STDOUT, "\n" . $summary);
+
+        if ($strict && self::$skipped !== []) {
+            fwrite(STDOUT, "Skipped tests are failures under --strict.\n");
+
+            return 1;
+        }
 
         return self::$failures === [] ? 0 : 1;
     }
@@ -122,7 +133,16 @@ function assertThrows(string $class, callable $fn, string $message = ''): void
     throw new RuntimeException(($message === '' ? '' : $message . ': ') . "expected {$class}, nothing thrown");
 }
 
-$filter = $argv[1] ?? '';
+$arguments = array_slice($argv, 1);
+$strict = in_array('--strict', $arguments, true);
+$filter = '';
+foreach ($arguments as $argument) {
+    if (!str_starts_with($argument, '--')) {
+        $filter = $argument;
+        break;
+    }
+}
+
 foreach (glob(__DIR__ . '/*_test.php') ?: [] as $file) {
     if ($filter !== '' && !str_contains(basename($file), $filter)) {
         continue;
@@ -130,4 +150,4 @@ foreach (glob(__DIR__ . '/*_test.php') ?: [] as $file) {
     require $file;
 }
 
-exit(TestRunner::run());
+exit(TestRunner::run($strict));

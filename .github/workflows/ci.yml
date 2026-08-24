@@ -1,0 +1,73 @@
+name: CI
+
+# There is no staging copy of this application: a bad migration is discovered
+# on the live site, during a shift, with 25-100 people on the tarmac. So the
+# suite runs against the same MariaDB major version the server runs, on the
+# same PHP version, on every push.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        # The server runs 10.11.18-MariaDB-cll-lve (docs/hosting.md).
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: resm
+          MARIADB_USER: resm
+          MARIADB_PASSWORD: resm_dev
+          MARIADB_ROOT_PASSWORD: root_dev
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      RESM_DB_HOST: 127.0.0.1
+      RESM_DB_PORT: 3306
+      RESM_DB_NAME: resm
+      RESM_DB_USER: resm
+      RESM_DB_PASS: resm_dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # Production is 8.2.33. Testing on a newer PHP would hide a syntax or
+          # deprecation problem until it reached the server.
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring
+          coverage: none
+          # The application has no Composer dependencies by design (CLAUDE.md),
+          # so there is nothing to install and nothing to cache.
+          tools: none
+
+      - name: Check syntax
+        run: |
+          set -euo pipefail
+          find app bin config public tests -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Apply migrations
+        run: php bin/migrate.php
+
+      - name: Confirm migrations are idempotent
+        run: |
+          set -euo pipefail
+          php bin/migrate.php | tee /tmp/second-run.txt
+          grep -q 'up to date' /tmp/second-run.txt
+
+      - name: Confirm the position seed still matches the specification
+        run: php bin/gen-position-seed.php --check
+
+      - name: Run tests
+        run: php tests/run.php --strict
