@@ -308,7 +308,24 @@ function setupPage(
     array $log = [],
 ): Response {
     $key = (string) $request->input('key', '');
-    $state = ['dbError' => null, 'applied' => [], 'pending' => [], 'drift' => [], 'admin' => null];
+    $state = [
+        'dbError' => null,
+        'dbDetail' => null,
+        // What the application is actually trying, read back from the merged
+        // configuration. If config.local.php is not being picked up, these
+        // show the committed defaults instead and the problem is obvious at a
+        // glance. The password is not among them and never will be.
+        'dbTarget' => sprintf(
+            '%s@%s / %s',
+            $app->config->string('db.user'),
+            $app->config->string('db.host'),
+            $app->config->string('db.name')
+        ),
+        'applied' => [],
+        'pending' => [],
+        'drift' => [],
+        'admin' => null,
+    ];
 
     try {
         $db = $app->db();
@@ -331,6 +348,17 @@ function setupPage(
         // Before config.local.php is right, this is the message that tells the
         // administrator what to fix.
         $state['dbError'] = $e->getMessage();
+
+        // Database deliberately replaces the driver's message with a generic
+        // one, because it carries the DSN and would otherwise reach a log or a
+        // public error page. That is right everywhere except here: this page
+        // is already behind the setup key, the administrator has no shell to
+        // read a log with, and "Database connection failed." names none of the
+        // four things that could be wrong. The driver says which.
+        $cause = $e->getPrevious();
+        if ($cause !== null) {
+            $state['dbDetail'] = $cause->getMessage();
+        }
     }
 
     return Response::html((new View($app))->render('setup', [
