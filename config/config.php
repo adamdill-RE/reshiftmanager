@@ -32,6 +32,17 @@ return [
 
         // Guards /status. Null means the page 404s unless debug is on.
         'status_key' => null,
+
+        // Guards /setup, which applies migrations and sets an administrator's
+        // PIN from a browser. That exists because this account has no SSH and
+        // no Terminal, so bin/migrate.php and bin/set-admin-pin.php cannot be
+        // reached any other way.
+        //
+        // It is a genuine administrative credential: anyone holding it can
+        // take the master admin account. Null disables /setup outright, and
+        // that is the state to leave it in once the app is running — clearing
+        // this key is how the door gets locked again.
+        'setup_key' => null,
     ],
 
     'db' => [

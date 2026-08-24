@@ -17,6 +17,15 @@ return [
         // Without it, /status returns 404 for everyone.
         'status_key' => '',
 
+        // Guards /setup, which runs migrations and sets an administrator's PIN
+        // from a browser — the only way to do either without shell access.
+        // Generate it the same way as status_key.
+        //
+        // Whoever holds this can take the master admin account. Set it when
+        // you need it, then REMOVE THIS LINE once the app is running: with no
+        // key configured, /setup does not exist.
+        'setup_key' => '',
+
         // Never true on the server.
         'debug' => false,
     ],

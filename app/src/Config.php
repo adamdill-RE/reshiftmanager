@@ -21,6 +21,7 @@ final class Config
         'RESM_BASE_PATH'      => 'app.base_path',
         'RESM_DEBUG'          => 'app.debug',
         'RESM_STATUS_KEY'     => 'app.status_key',
+        'RESM_SETUP_KEY'      => 'app.setup_key',
         'RESM_DB_HOST'        => 'db.host',
         'RESM_DB_PORT'        => 'db.port',
         'RESM_DB_NAME'        => 'db.name',

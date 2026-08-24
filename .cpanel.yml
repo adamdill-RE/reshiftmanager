@@ -28,7 +28,17 @@ deployment:
     # user. X preserves an execute bit a file already had, which is safe here
     # because git records every file in this repository as mode 100644, and CI
     # fails the build if that ever stops being true.
-    - /bin/chmod -R u=rwX,go=rX $APP_DIR/app $APP_DIR/db $APP_DIR/bin $APP_DIR/config $WEB_DIR
+    - /bin/chmod -R u=rwX,go=rX $APP_DIR/app $APP_DIR/db $APP_DIR/bin $WEB_DIR
+    # config/ is handled separately, and deliberately not recursively. It holds
+    # config.local.php, which this deploy did not create and must not loosen:
+    # it carries the database password. A recursive pass over this directory
+    # would reset it to 0644 on every deploy, quietly undoing the mode the
+    # administrator set.
+    - /bin/chmod 0755 $APP_DIR/config
+    - /bin/chmod 0644 $APP_DIR/config/config.php
+    # And tighten it if it is there. Guarded, because on a first deploy the
+    # file does not exist yet and a failing task fails the whole deployment.
+    - if test -f $APP_DIR/config/config.local.php; then /bin/chmod 0600 $APP_DIR/config/config.local.php; fi
     # Session files, private and outside the document root. 0700 is safe here
     # precisely because nothing serves this directory.
     - /bin/mkdir -p $APP_DIR/var/sessions
