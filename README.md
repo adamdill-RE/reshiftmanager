@@ -82,6 +82,15 @@ php bin/migrate.php --status
 php bin/migrate.php
 ```
 
+**The database is not on the web server.** Ahosting runs it separately, so
+`db.host` is the address cPanel shows under Remote MySQL — an IP rather than a
+hostname — not `localhost` and not `127.0.0.1`. Point it at this machine and you reach a different MySQL
+instance, which answers `SQLSTATE[HY000] [1524] Plugin 'unix_socket' is not
+loaded`. That reads like a credentials problem and is not one — it is the
+local instance refusing an account it has never heard of. No amount of
+password resetting will fix it; MariaDB refuses `SET PASSWORD` on such an
+account anyway.
+
 `config.local.php` is the one file on the server the deploy does not own — it
 holds the database password, is not in git, and must survive every deploy. The
 deploy therefore never chmods `config/` recursively; it sets `config.php` and,

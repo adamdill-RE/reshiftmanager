@@ -19,23 +19,47 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: test (${{ matrix.db.name }})
+
+    # Both engines, because we do not know which one the server runs. cPanel's
+    # Server Information reports the database on the WEB server, and this
+    # account's database is on separate hardware, so that reading says nothing
+    # about the engine the application actually talks to.
+    #
+    # This is not hypothetical. The schema used STORED generated columns, which
+    # MariaDB accepts alongside ON DELETE CASCADE and MySQL rejects outright
+    # with error 1215. A MariaDB-only pipeline passed it straight through to a
+    # server that could not create the table.
+    strategy:
+      fail-fast: false
+      matrix:
+        db:
+          - name: MariaDB 10.11
+            image: mariadb:10.11
+          - name: MySQL 8.0
+            image: mysql:8.0
 
     services:
       db:
-        # The server runs 10.11.18-MariaDB-cll-lve (docs/hosting.md).
-        image: mariadb:10.11
+        image: ${{ matrix.db.image }}
+        # Each image reads its own prefix and ignores the other's, so one block
+        # configures both.
         env:
           MARIADB_DATABASE: resm
           MARIADB_USER: resm
           MARIADB_PASSWORD: resm_dev
           MARIADB_ROOT_PASSWORD: root_dev
+          MYSQL_DATABASE: resm
+          MYSQL_USER: resm
+          MYSQL_PASSWORD: resm_dev
+          MYSQL_ROOT_PASSWORD: root_dev
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
           --health-interval=5s
           --health-timeout=5s
-          --health-retries=20
+          --health-retries=30
 
     env:
       RESM_DB_HOST: 127.0.0.1
