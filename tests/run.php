@@ -133,6 +133,8 @@ function assertThrows(string $class, callable $fn, string $message = ''): void
     throw new RuntimeException(($message === '' ? '' : $message . ': ') . "expected {$class}, nothing thrown");
 }
 
+require __DIR__ . '/helpers.php';
+
 $arguments = array_slice($argv, 1);
 $strict = in_array('--strict', $arguments, true);
 $filter = '';

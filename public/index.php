@@ -56,11 +56,28 @@ $app->startSession();
 
 $request = Resm\Http\Request::capture($app);
 
+// Auth records the address and user agent a sign-in came from, so it needs the
+// request that is being served.
+$app->bindRequest($request);
+
 /** @var Resm\Http\Router $router */
 $router = require $appRoot . '/app/routes.php';
 
 try {
     $router->dispatch($app, $request)->send();
+} catch (Resm\Auth\AccessDenied $e) {
+    // Logged with the detail, answered without it: the response never says
+    // what the user was not allowed to see, or that it exists.
+    error_log('[resm] access denied: ' . $e->getMessage());
+
+    Resm\Http\Response::html(
+        (new Resm\View($app))->render('error', [
+            'title'   => 'Not available',
+            'heading' => 'Not available',
+            'message' => 'That screen is not available to your account. Ask an officer if you think it should be.',
+        ]),
+        403
+    )->send();
 } catch (Throwable $e) {
     // display_errors is off on the server, so the detail goes to
     // /home/reshiftmanager/logs/php.error.log and the visitor gets a page.

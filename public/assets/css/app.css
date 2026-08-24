@@ -335,3 +335,169 @@ a {
         transition: none !important;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Forms
+   --------------------------------------------------------------------------- */
+
+.field {
+    margin-bottom: 1rem;
+}
+
+.field__label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+}
+
+.field__input {
+    width: 100%;
+    min-height: var(--touch-primary);
+    padding: 0 0.875rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.25rem;
+    font-family: inherit;
+}
+
+.field__hint {
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* A checkbox is a small target by default; the whole row is the target here. */
+.check {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: var(--touch-min);
+    padding: 0.5rem 0;
+    font-size: 1.05rem;
+    cursor: pointer;
+}
+
+.check input {
+    width: 28px;
+    height: 28px;
+    accent-color: var(--action-bg);
+    flex: none;
+}
+
+/* ---------------------------------------------------------------------------
+   PIN keypad (spec 3.2) — 64px keys, the single most important accommodation
+   for cold hands.
+   --------------------------------------------------------------------------- */
+
+.pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 0.5rem 0 1rem;
+}
+
+.pin-dot {
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--border);
+    border-radius: 50%;
+}
+
+.pin-dot--filled {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--touch-gap);
+    margin-bottom: 1rem;
+}
+
+.keypad__key {
+    min-height: var(--touch-primary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 1.6rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.keypad__key--wide {
+    font-size: 1.05rem;
+}
+
+.keypad__key:active {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+/* ---------------------------------------------------------------------------
+   Menu tiles
+   --------------------------------------------------------------------------- */
+
+.tile__icon {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    color: var(--accent);
+}
+
+.tile__text {
+    display: flex;
+    flex-direction: column;
+}
+
+.tile__sub {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.identity {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Messages
+   --------------------------------------------------------------------------- */
+
+.alert {
+    border-radius: var(--radius);
+    padding: 0.875rem 1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.alert--error {
+    background: var(--danger-surface);
+    color: var(--danger);
+    border: 2px solid var(--danger);
+}
+
+.alert--ok {
+    background: var(--ok-surface);
+    color: var(--ok);
+    border: 2px solid var(--ok);
+}
+
+.stack > * + * {
+    margin-top: var(--touch-gap);
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+}

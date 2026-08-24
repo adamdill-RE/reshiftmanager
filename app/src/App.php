@@ -11,6 +11,8 @@ namespace Resm;
 final class App
 {
     private ?Database $db = null;
+    private ?Http\Request $request = null;
+    private ?Auth\Auth $auth = null;
 
     private function __construct(
         public readonly Config $config,
@@ -37,6 +39,35 @@ final class App
     public function startSession(): void
     {
         Session::start($this->config, $this->root);
+    }
+
+    /**
+     * Hand the app the request being served. Auth needs it for the client
+     * address and user agent it records against a sign-in, so this is bound
+     * once by the front controller before anything is dispatched.
+     */
+    public function bindRequest(Http\Request $request): void
+    {
+        $this->request = $request;
+        $this->auth = null;
+    }
+
+    public function auth(): Auth\Auth
+    {
+        if (!$this->auth instanceof Auth\Auth) {
+            if (!$this->request instanceof Http\Request) {
+                throw new \RuntimeException('No request is bound; Auth cannot record where a sign-in came from.');
+            }
+            $this->auth = new Auth\Auth($this, $this->request);
+        }
+
+        return $this->auth;
+    }
+
+    /** The signed-in user, or null. Shorthand for auth()->user(). */
+    public function user(): ?Auth\Identity
+    {
+        return $this->auth()->user();
     }
 
     /**

@@ -5,7 +5,15 @@ name: CI
 # suite runs against the same MariaDB major version the server runs, on the
 # same PHP version, on every push.
 on:
+  # pull_request covers every feature branch. push is limited to the trunk, so
+  # a commit on a branch with an open PR runs the job once rather than twice —
+  # the same checks reported under two identical names is noise when you are
+  # reading a PR's status.
   push:
+    branches:
+      - claude/rodeo-express-init-6owg3p
+      - main
+      - master
   pull_request:
 
 jobs:

@@ -51,9 +51,14 @@ final class Session
         ini_set('session.use_only_cookies', '1');
         ini_set('session.use_trans_sid', '0');
 
-        ini_set('session.sid_length', '48');
-        ini_set('session.sid_bits_per_character', '5');
         ini_set('session.cache_limiter', 'nocache');
+
+        // session.sid_length and session.sid_bits_per_character are
+        // deliberately not set. PHP's defaults are already a secure length,
+        // and both settings are deprecated as of 8.4 — setting them buys
+        // nothing and emits a deprecation notice the day this host is
+        // upgraded past 8.2. use_strict_mode above, and regenerating the id on
+        // every privilege change, are what actually matter here.
 
         session_name($config->string('session.name', 'RESMSESS'));
 
