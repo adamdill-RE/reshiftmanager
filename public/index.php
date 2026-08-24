@@ -47,8 +47,25 @@ if ($appRoot === null) {
     );
 }
 
-/** @var Resm\App $app */
-$app = require $appRoot . '/app/bootstrap.php';
+/*
+ * Booting is separated from serving because a configuration error happens
+ * before there is an application to render an error page with. An
+ * administrator without shell access cannot read a log to find out why the
+ * page went blank, so this one class of error is reported on screen. The
+ * message names the file and the problem and never a credential.
+ */
+try {
+    /** @var Resm\App $app */
+    $app = require $appRoot . '/app/bootstrap.php';
+} catch (Resm\ConfigurationError $e) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit(
+        "Rodeo Express is not configured correctly.\n\n"
+        . $e->getMessage() . "\n\n"
+        . "Fix config/config.local.php in the application directory, then reload.\n"
+    );
+}
 
 // Session cookies must be configured before anything is sent, and the app is
 // session-backed from the login screen onward.

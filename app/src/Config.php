@@ -53,8 +53,22 @@ final class Config
 
         $local = $configDir . '/config.local.php';
         if (is_file($local)) {
-            /** @var array<string, mixed> $overrides */
             $overrides = require $local;
+
+            // An empty file is the usual cause: require returns int(1) for
+            // one, and without this check that became an uncaught TypeError
+            // deep in merge() and a blank page with nothing on screen to act
+            // on. Say what is wrong instead.
+            if (!is_array($overrides)) {
+                throw new ConfigurationError(sprintf(
+                    'config.local.php must return an array, but returned %s. '
+                    . 'An empty or unsaved file is the usual cause - it should '
+                    . 'start with "<?php" and end with a "return [...];".',
+                    get_debug_type($overrides)
+                ));
+            }
+
+            /** @var array<string, mixed> $overrides */
             $values = self::merge($values, $overrides);
         }
 
