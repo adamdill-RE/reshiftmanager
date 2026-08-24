@@ -59,6 +59,38 @@ jobs:
           # so there is nothing to install and nothing to cache.
           tools: none
 
+      - name: Check the deployment manifest
+        run: |
+          set -euo pipefail
+          # .cpanel.yml is parsed by the host, not by us, and a file it rejects
+          # disables deployment entirely rather than failing loudly. Check the
+          # things that parser is strict about, and that we cannot see fail
+          # until a deploy is attempted.
+          python3 -c "
+          import sys, yaml
+          raw = open('.cpanel.yml', 'rb').read()
+          raw.decode('ascii')                     # non-ASCII is rejected
+          assert b'\t' not in raw, 'tabs'
+          tasks = yaml.safe_load(raw)['deployment']['tasks']
+          assert tasks and all(isinstance(t, str) for t in tasks), 'tasks must be plain strings'
+          assert not any('{' in t or '}' in t for t in tasks), 'braces are a YAML flow indicator'
+          print(f'.cpanel.yml ok: {len(tasks)} tasks')
+          "
+
+      - name: Check tracked file modes
+        run: |
+          set -euo pipefail
+          # The deploy sets permissions with a single 'chmod -R u=rwX,go=rX',
+          # where capital X preserves an execute bit a file already carries.
+          # That is only correct because every file here is mode 100644. If one
+          # ever lands executable, it would be deployed executable and the
+          # deploy would stop matching the 0755/0644 rule, silently.
+          if git ls-files -s | awk '$1 != "100644" { print; found = 1 } END { exit !found }'; then
+            echo "The files above are not mode 100644; the deploy assumes they all are." >&2
+            exit 1
+          fi
+          echo "every tracked file is mode 100644"
+
       - name: Check syntax
         run: |
           set -euo pipefail

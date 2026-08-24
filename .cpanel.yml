@@ -1,43 +1,38 @@
 ---
-# cPanel "Deploy HEAD Commit" runs these in the repository clone. They are
-# concatenated into one shell script, so exported variables carry between them.
-#
-# The split below is the whole point: public/ is the only thing that reaches
-# public_html, and the application goes to a sibling directory that no URL can
-# reach. DOCUMENT_ROOT here is public_html itself, so anything left inside it
-# is web-readable — an .htaccess rule in front of app/ would be strictly weaker
-# than not putting app/ there at all.
 deployment:
   tasks:
-    - export HOME_DIR=/home/reshiftmanager
-    - export APP_DIR=$HOME_DIR/resm-app
-    - export WEB_DIR=$HOME_DIR/public_html/resm
+    # public/ is the only directory that becomes web content. Everything else
+    # goes to a sibling of public_html, where no URL can reach it: on this host
+    # DOCUMENT_ROOT is public_html itself, so anything left inside it is
+    # readable over the web.
+    - export APP_DIR=/home/reshiftmanager/resm-app
+    - export WEB_DIR=/home/reshiftmanager/public_html/resm
     - /bin/mkdir -p $APP_DIR $WEB_DIR
-
-    # Application code. Cleared first so a file deleted in git is deleted on
-    # the server; plain cp would leave it behind.
+    # Cleared first so a file deleted in git is deleted on the server too.
     - /bin/rm -rf $APP_DIR/app $APP_DIR/db $APP_DIR/bin
     - /bin/cp -R app db bin $APP_DIR/
-
-    # config/config.php only. config.local.php holds the database credentials
-    # and the status key, is not in git, and must survive every deploy.
+    # config.php only. config.local.php holds the database credentials and the
+    # status key, is not in git, and must survive every deploy.
     - /bin/mkdir -p $APP_DIR/config
     - /bin/cp config/config.php $APP_DIR/config/config.php
-
     # Public documents, including .htaccess.
     - /bin/cp -R public/. $WEB_DIR/
-
-    # Directories 0755, files 0644 (CLAUDE.md). Watch these after a deploy: a
-    # directory left at 0700 answers 404 rather than 403, because the server
-    # cannot traverse in and declines to say whether the file exists.
-    - /usr/bin/find $APP_DIR/app $APP_DIR/db $APP_DIR/bin $APP_DIR/config $WEB_DIR -type d -exec /bin/chmod 0755 {} +
-    - /usr/bin/find $APP_DIR/app $APP_DIR/db $APP_DIR/bin $APP_DIR/config $WEB_DIR -type f -exec /bin/chmod 0644 {} +
-
-    # Session files, kept private and outside the document root. 0700 is safe
-    # here precisely because nothing serves this directory.
+    # Directories 0755, files 0644. Capital X sets the execute bit on
+    # directories only, so one pass does both. It also repairs a directory a
+    # previous deploy left untraversable, which matters because a directory at
+    # 0700 answers 404 rather than 403 and looks like a missing file.
+    #
+    # Not find -exec: the braces are a YAML flow indicator, and this parser is
+    # stricter than most. Not a preceding a-x pass either - that strips execute
+    # from the top directory and then cannot descend into it as a non-root
+    # user. X preserves an execute bit a file already had, which is safe here
+    # because git records every file in this repository as mode 100644, and CI
+    # fails the build if that ever stops being true.
+    - /bin/chmod -R u=rwX,go=rX $APP_DIR/app $APP_DIR/db $APP_DIR/bin $APP_DIR/config $WEB_DIR
+    # Session files, private and outside the document root. 0700 is safe here
+    # precisely because nothing serves this directory.
     - /bin/mkdir -p $APP_DIR/var/sessions
     - /bin/chmod 0700 $APP_DIR/var $APP_DIR/var/sessions
-
-    # Migrations are NOT run automatically. Schema changes are applied by hand
-    # over SSH or cPanel Terminal, after checking what is pending:
+    # Migrations are NOT run automatically. Apply them by hand over SSH or
+    # cPanel Terminal, after checking what is pending:
     #   cd ~/resm-app && php bin/migrate.php --status && php bin/migrate.php
