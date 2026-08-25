@@ -51,10 +51,9 @@ final class Menu
             'icon' => 'check',
             'sub' => 'One tap, works offline',
             'role' => Role::Committeeman,
-            'built' => false,
-            'summary' => 'One large button showing the opposite of your current state, on the '
-                . 'honour system, queued locally when there is no signal.',
-            'phase' => 'Phase 3 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'my-shift' => [
             'label' => 'My Shift Status',

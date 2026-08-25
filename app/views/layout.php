@@ -30,6 +30,17 @@ $back = $back ?? null;
         <span class="masthead__sub">Shift Management</span>
     </header>
 
+    <?php
+    // Spec 6.3: the strip is on every screen, so it is rendered here rather
+    // than by each page remembering to. It builds to null whenever there is
+    // nothing to say, and never throws — a decoration must not take down the
+    // page it decorates.
+    $widget = Resm\Shift\Widget::forRequest($app);
+    if ($widget !== null) {
+        echo (new Resm\View($app))->render('widget', $widget, layout: null);
+    }
+    ?>
+
     <?php if ($back !== null): ?>
         <p><a class="button button--quiet" href="<?= e($back['url']) ?>">&larr; <?= e($back['label']) ?></a></p>
     <?php endif; ?>
@@ -37,6 +48,11 @@ $back = $back ?? null;
     <?= $content ?>
 </div>
 
+<?php
+if ($widget !== null && !in_array('js/freshness.js', $scripts, true)) {
+    $scripts[] = 'js/freshness.js';
+}
+?>
 <?php foreach ($scripts as $script): ?>
     <script src="<?= e($app->asset($script)) ?>" defer></script>
 <?php endforeach; ?>
