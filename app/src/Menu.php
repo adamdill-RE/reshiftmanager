@@ -32,10 +32,9 @@ final class Menu
             'icon' => 'shield',
             'sub' => 'Seasons, teams, rosters, shifts',
             'role' => Role::Admin,
-            'built' => false,
-            'summary' => 'Create seasons and teams, import and export the roster, create shifts '
-                . 'and users, edit the position matrix, and read the audit log.',
-            'phase' => 'Phase 2 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'officer' => [
             'label' => 'Officer Menu',
