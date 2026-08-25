@@ -71,6 +71,34 @@ final class Request
     }
 
     /**
+     * A repeated form field — a group of checkboxes posts `team_ids[]` — as a
+     * list of trimmed strings.
+     *
+     * Anything that is not a scalar is dropped rather than handed on: PHP will
+     * build a nested array out of `team_ids[a][b]` without being asked, and no
+     * caller here wants one.
+     *
+     * @return array<int, string>
+     */
+    public function inputList(string $key): array
+    {
+        $value = $this->post[$key] ?? $this->query[$key] ?? null;
+
+        if (!is_array($value)) {
+            return is_string($value) ? [trim($value)] : [];
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (is_scalar($item)) {
+                $items[] = trim((string) $item);
+            }
+        }
+
+        return $items;
+    }
+
+    /**
      * The client address, as text.
      *
      * Read straight from REMOTE_ADDR. X-Forwarded-For is deliberately ignored:

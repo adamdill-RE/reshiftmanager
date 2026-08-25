@@ -43,20 +43,17 @@ final class AdminMenu
             'label' => 'Create Committeeman',
             'sub' => 'One at a time, by hand',
             'capability' => Capability::CreateOfficerAdminUsers,
-            'built' => false,
-            'summary' => 'The same fields as an import row, entered manually, with team '
-                . 'assignment. The PIN starts at 1234.',
-            'phase' => 'Next, in phase 2.',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'officers' => [
             'label' => 'Create Officer / Admin',
             'sub' => 'With team assignment',
             'capability' => Capability::CreateOfficerAdminUsers,
-            'built' => false,
-            'summary' => 'Name, Member ID, phone, email, role and the teams they cover. '
-                . 'Officers on a team with an active shift appear in that shift\'s officer '
-                . 'contact list.',
-            'phase' => 'Next, in phase 2.',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'shifts' => [
             'label' => 'Create Shifts',
