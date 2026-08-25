@@ -20,6 +20,7 @@ declare(strict_types=1);
 use Resm\App;
 use Resm\Admin\Seasons;
 use Resm\Admin\Teams;
+use Resm\Admin\Users;
 use Resm\AdminMenu;
 use Resm\Auth\Capability;
 use Resm\Auth\Role;
@@ -244,6 +245,101 @@ $router->post('admin/teams', static function (App $app, Request $request): Respo
 });
 
 /*
+ * Create Committeeman (spec 6.10.7) and Create Officer / Admin (spec 6.10.6).
+ *
+ * The same screen twice. Only the roles it offers differ, and the service
+ * refuses any role outside the set the route hands it — so the role a form
+ * posts is a request, not an instruction.
+ */
+foreach (['committeemen', 'officers'] as $userKey) {
+    $router->get('admin/' . $userKey, static function (App $app, Request $request) use ($userKey): Response {
+        $user = requireAdmin($app, Capability::CreateOfficerAdminUsers);
+        if (!$user instanceof Resm\Auth\Identity) {
+            return $user;
+        }
+
+        return Response::html(usersPage(
+            $app,
+            $userKey,
+            search: (string) $request->input('q', ''),
+            notice: $request->input('created') !== null
+                ? 'Account created. Their PIN is ' . $app->config->string('auth.default_pin', '1234') . '.'
+                : ($request->input('done') !== null ? 'Saved.' : null),
+        ));
+    });
+
+    $router->post('admin/' . $userKey, static function (App $app, Request $request) use ($userKey): Response {
+        $user = requireAdmin($app, Capability::CreateOfficerAdminUsers);
+        if (!$user instanceof Resm\Auth\Identity) {
+            return $user;
+        }
+        if (!Csrf::check($request->input(Csrf::FIELD))) {
+            return Response::html(usersPage($app, $userKey, error: 'That page went stale. Try again.'), 400);
+        }
+
+        $season = adminSeasons($app)->active();
+        if ($season === null) {
+            return Response::html(usersPage($app, $userKey, error: 'There is no active season.'), 422);
+        }
+
+        $screen = adminUserScreen($userKey);
+        $users = adminUsers($app);
+        $seasonId = (int) $season['id'];
+        $action = (string) $request->input('action', '');
+        $teamIds = $request->inputList('team_ids');
+
+        if ($action === 'create') {
+            $result = $users->create(
+                $user,
+                $seasonId,
+                $screen['roles'],
+                (string) $request->input('member_id', ''),
+                (string) $request->input('last_name', ''),
+                (string) $request->input('first_name', ''),
+                // No default. A form always posts one — the radio group, or
+                // the hidden field on the single-role screen — so a request
+                // without a role is not a form, and gets refused rather than
+                // quietly assigned one.
+                (string) $request->input('role', ''),
+                (string) $request->input('phone', ''),
+                (string) $request->input('email', ''),
+                $teamIds,
+            );
+
+            if ($result['ok']) {
+                return Response::redirect($app->url('admin/' . $userKey . '?created=1'));
+            }
+
+            // Everything typed comes back with the message. Re-keying six
+            // fields because one of them was wrong is how a roster of 150
+            // people stops getting entered.
+            return Response::html(usersPage($app, $userKey, error: $result['error'], form: [
+                'member_id'  => (string) $request->input('member_id', ''),
+                'first_name' => (string) $request->input('first_name', ''),
+                'last_name'  => (string) $request->input('last_name', ''),
+                'phone'      => (string) $request->input('phone', ''),
+                'email'      => (string) $request->input('email', ''),
+                'role'       => (string) $request->input('role', ''),
+                'team_ids'   => $teamIds,
+            ]), 422);
+        }
+
+        $userId = (int) $request->input('user_id', '0');
+
+        $result = match ($action) {
+            'teams' => $users->setTeams($user, $seasonId, $userId, $teamIds),
+            'activate' => $users->setActive($user, $userId, true),
+            'deactivate' => $users->setActive($user, $userId, false),
+            default => ['ok' => false, 'error' => 'Unknown action.', 'id' => null],
+        };
+
+        return $result['ok']
+            ? Response::redirect($app->url('admin/' . $userKey . '?done=1'))
+            : Response::html(usersPage($app, $userKey, error: $result['error']), 422);
+    });
+}
+
+/*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.
  */
@@ -439,6 +535,94 @@ function teamsPage(App $app, ?string $error = null, ?string $notice = null): str
         'title' => 'Teams',
         'season' => $season,
         'teams' => $season === null ? [] : adminTeams($app)->forSeason((int) $season['id']),
+        'error' => $error,
+        'notice' => $notice,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function adminUsers(App $app): Users
+{
+    return new Users(
+        $app->db(),
+        new Resm\AuditLog($app->db()),
+        $app->config->int('auth.pin_cost', 11),
+        $app->config->string('auth.default_pin', '1234'),
+    );
+}
+
+/**
+ * What separates the two Create-User screens. The roles are the load-bearing
+ * part: Users::create refuses anything not in this list, so the Committeeman
+ * screen cannot be posted into an Admin account.
+ *
+ * @return array{heading: string, intro: string, roles: array<int, Role>, noun: string, nounPlural: string}
+ */
+function adminUserScreen(string $key): array
+{
+    return $key === 'officers'
+        ? [
+            'heading' => 'Create Officer / Admin',
+            'intro' => 'Officers run a shift board for the teams they cover. Admins '
+                . 'do that everywhere, and hold the screens on this menu. An officer '
+                . 'on a team with an active shift appears in that shift\'s officer '
+                . 'contact list.',
+            'roles' => [Role::Officer, Role::Admin],
+            'noun' => 'officer or admin',
+            'nounPlural' => 'officers and admins',
+        ]
+        : [
+            'heading' => 'Create Committeeman',
+            'intro' => 'One at a time. For a whole roster, Import Roster takes the '
+                . 'same fields as a CSV and shows you what it would do before it '
+                . 'writes anything.',
+            'roles' => [Role::Committeeman],
+            'noun' => 'committeeman',
+            'nounPlural' => 'committeemen',
+        ];
+}
+
+/**
+ * @param array<string, mixed> $form
+ */
+function usersPage(
+    App $app,
+    string $key,
+    ?string $error = null,
+    ?string $notice = null,
+    string $search = '',
+    array $form = [],
+): string {
+    $actor = $app->user();
+    $screen = adminUserScreen($key);
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+
+    return (new View($app))->render('admin/users', [
+        'title' => $screen['heading'],
+        'endpoint' => 'admin/' . $key,
+        'heading' => $screen['heading'],
+        'intro' => $screen['intro'],
+        'roles' => $screen['roles'],
+        'noun' => $screen['noun'],
+        'nounPlural' => $screen['nounPlural'],
+        'season' => $season,
+        // Only active teams can be assigned to. Last year's disbanded team is
+        // still on the Teams screen and still owns its history; it is not a
+        // place to put somebody this year.
+        'teams' => $season === null
+            ? []
+            : array_values(array_filter(
+                adminTeams($app)->forSeason($seasonId),
+                static fn (array $t): bool => (int) $t['is_active'] === 1
+            )),
+        'people' => $season === null
+            ? []
+            : adminUsers($app)->withRoles($seasonId, $screen['roles'], $search),
+        'search' => $search,
+        'actorId' => $actor?->id ?? 0,
+        'defaultPin' => $app->config->string('auth.default_pin', '1234'),
+        'form' => $form,
         'error' => $error,
         'notice' => $notice,
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
