@@ -41,8 +41,8 @@ deployment:
     - if test -f $APP_DIR/config/config.local.php; then /bin/chmod 0600 $APP_DIR/config/config.local.php; fi
     # Session files, private and outside the document root. 0700 is safe here
     # precisely because nothing serves this directory.
-    - /bin/mkdir -p $APP_DIR/var/sessions
-    - /bin/chmod 0700 $APP_DIR/var $APP_DIR/var/sessions
+    - /bin/mkdir -p $APP_DIR/var/sessions $APP_DIR/var/imports
+    - /bin/chmod 0700 $APP_DIR/var $APP_DIR/var/sessions $APP_DIR/var/imports
     # Migrations are NOT run automatically. Apply them by hand over SSH or
     # cPanel Terminal, after checking what is pending:
     #   cd ~/resm-app && php bin/migrate.php --status && php bin/migrate.php

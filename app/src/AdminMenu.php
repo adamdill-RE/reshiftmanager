@@ -67,10 +67,9 @@ final class AdminMenu
             'label' => 'Import Roster',
             'sub' => 'CSV, dry run first',
             'capability' => Capability::ImportExportRoster,
-            'built' => false,
-            'summary' => 'Never commits on upload. Parses, validates and shows what would '
-                . 'happen, with an error report, and writes nothing until you confirm.',
-            'phase' => 'Next, in phase 2.',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'export' => [
             'label' => 'Export Roster',

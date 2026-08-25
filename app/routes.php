@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 use Resm\App;
 use Resm\Admin\Seasons;
+use Resm\Admin\ImportFile;
+use Resm\Admin\RosterImport;
 use Resm\Admin\Shifts;
 use Resm\Admin\Teams;
 use Resm\Admin\Users;
@@ -474,6 +476,120 @@ $router->post('admin/shifts', static function (App $app, Request $request): Resp
 });
 
 /*
+ * Import Roster (spec 6.10.3).
+ *
+ * Two requests. The first reads the file and shows what it would do; the
+ * second does it. The file is held between them and re-parsed on confirm, so
+ * the summary that was approved and the write that follows cannot disagree.
+ */
+$router->get('admin/import', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html(importPage($app));
+});
+
+$router->post('admin/import', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(importPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return Response::html(importPage($app, error: 'There is no active season.'), 422);
+    }
+
+    $held = importFile($app);
+    $action = (string) $request->input('action', '');
+
+    if ($action === 'discard') {
+        $held->discard();
+
+        return Response::redirect($app->url('admin/import'));
+    }
+
+    if ($action === 'dry-run') {
+        $upload = importUpload();
+        if ($upload === null) {
+            return Response::html(importPage($app, error: importUploadError()), 422);
+        }
+
+        $stored = $held->store($upload['content'], $upload['name']);
+        if (!$stored['ok']) {
+            return Response::html(importPage($app, error: $stored['error']), 500);
+        }
+
+        // Re-read through the same path the confirm will use, so a file that
+        // cannot be read back is discovered now rather than after approval.
+        return Response::html(importPage($app));
+    }
+
+    if ($action !== 'commit') {
+        return Response::html(importPage($app, error: 'Unknown action.'), 422);
+    }
+
+    $content = $held->contents();
+    if ($content === null) {
+        return Response::html(
+            importPage($app, error: 'That upload is no longer here. Upload the file again.'),
+            422
+        );
+    }
+
+    $result = rosterImport($app)->commit($user, $content, (int) $season['id']);
+    if (!$result['ok']) {
+        return Response::html(importPage($app, error: $result['error']), 422);
+    }
+
+    $held->discard();
+    $counts = $result['counts'];
+
+    return Response::html(importPage($app, notice: sprintf(
+        'Imported. %d new, %d updated%s, %d skipped, %d in error.',
+        $counts['new'],
+        $counts['update'],
+        $counts['reactivate'] > 0 ? sprintf(', %d reactivated', $counts['reactivate']) : '',
+        $counts['skip'],
+        $counts['error'],
+    )));
+});
+
+/*
+ * The error report from the pending dry run (spec 6.10.3).
+ *
+ * Rebuilt from the held file rather than stored, for the same reason the
+ * confirm re-parses: one source of truth for what this upload says.
+ */
+$router->get('admin/import/errors', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $season = adminSeasons($app)->active();
+    $content = importFile($app)->contents();
+    if ($season === null || $content === null) {
+        return notFoundResponse($app);
+    }
+
+    $plan = rosterImport($app)->plan($content, (int) $season['id']);
+    if (!$plan['ok']) {
+        return notFoundResponse($app);
+    }
+
+    return Response::text(RosterImport::errorReport($plan['rows']))
+        ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+        ->withHeader('Content-Disposition', 'attachment; filename="roster-import-report.csv"')
+        ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+});
+
+/*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.
  */
@@ -803,6 +919,103 @@ function shiftsPage(
         'error' => $error,
         'notice' => $notice === '' ? null : $notice,
         'scripts' => ['js/shift-form.js'],
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function rosterImport(App $app): RosterImport
+{
+    return new RosterImport(
+        $app->db(),
+        new Resm\AuditLog($app->db()),
+        $app->config->int('auth.pin_cost', 11),
+        $app->config->string('auth.default_pin', '1234'),
+    );
+}
+
+function importFile(App $app): ImportFile
+{
+    // Outside public_html, like everything under var/.
+    return new ImportFile($app->root . '/var/imports');
+}
+
+/**
+ * The uploaded file, or null when the browser sent nothing usable.
+ *
+ * @return array{content: string, name: string}|null
+ */
+function importUpload(): ?array
+{
+    $file = $_FILES['roster'] ?? null;
+    if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return null;
+    }
+
+    $path = $file['tmp_name'] ?? '';
+    if (!is_string($path) || $path === '' || !is_uploaded_file($path)) {
+        return null;
+    }
+
+    $content = @file_get_contents($path);
+    if ($content === false || $content === '') {
+        return null;
+    }
+
+    return ['content' => $content, 'name' => basename((string) ($file['name'] ?? 'roster.csv'))];
+}
+
+/**
+ * Why the upload did not arrive, in words an administrator can act on.
+ *
+ * post_max_size is 8M and upload_max_filesize 2M on this host
+ * (docs/hosting.md); a file over post_max_size arrives as an empty $_FILES
+ * with no error code at all, which is why the default says what it does.
+ */
+function importUploadError(): string
+{
+    $code = $_FILES['roster']['error'] ?? UPLOAD_ERR_NO_FILE;
+
+    return match ($code) {
+        UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'That file is larger than the server accepts.',
+        UPLOAD_ERR_PARTIAL => 'That upload did not finish. Try again.',
+        UPLOAD_ERR_NO_FILE => 'Choose a CSV file first. If you did, it may be too large to upload.',
+        UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => 'The server could not save the upload.',
+        default => 'That upload did not arrive.',
+    };
+}
+
+function importPage(App $app, ?string $error = null, ?string $notice = null): string
+{
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $held = importFile($app);
+
+    // Only build a plan when there is a file to build it from; the upload form
+    // is what shows otherwise.
+    $content = $held->contents();
+    $plan = null;
+    if ($season !== null && $content !== null) {
+        $plan = rosterImport($app)->plan($content, $seasonId);
+        if (!$plan['ok']) {
+            $error ??= $plan['error'];
+            $held->discard();
+            $plan = null;
+        }
+    }
+
+    return (new View($app))->render('admin/import', [
+        'title' => 'Import Roster',
+        'season' => $season,
+        'teams' => $season === null
+            ? []
+            : array_values(array_filter(
+                adminTeams($app)->forSeason($seasonId),
+                static fn (array $t): bool => (int) $t['is_active'] === 1
+            )),
+        'plan' => $plan,
+        'fileName' => $held->name(),
+        'error' => $error,
+        'notice' => $notice,
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
     ]);
 }

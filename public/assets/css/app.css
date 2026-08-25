@@ -492,6 +492,14 @@ a {
     border: 2px solid var(--ok);
 }
 
+/* Something worth reading that is not a failure — a repeated Member ID in an
+   import file, which resolves rather than stopping the run. */
+.alert--warn {
+    background: var(--warn-surface);
+    color: var(--warn);
+    border: 2px solid var(--warn);
+}
+
 .stack > * + * {
     margin-top: var(--touch-gap);
 }
