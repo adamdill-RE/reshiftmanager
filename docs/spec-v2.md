@@ -756,7 +756,7 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | ~~1~~ | **Answered.** All ten groups, on every shift type — the phase matrix already does the per-phase filtering and the four route stops always run. See Section 5.4, which also re-scopes the count this question was asked in service of. |
 | 2 | Do forklift and golf cart certifications correspond to any tarmac positions, or are they reference-only? |
 | 3 | Does "Crosswalk Middle" mean the Naomi Center Starter and Holly Hall Center positions, or something else? |
-| ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. One open detail: Reed Road is two gates in one group and now carries a single critical Computer and Counter, not one per gate. |
+| ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. Reed Road carries a single critical Computer and Counter for the group rather than one per gate: Reed and Employee can run from one gate when short, which is a management change on the ground rather than a second critical pair. |
 | 5 | A committeeman on two teams: if both teams somehow have shifts on the same date, which shift does his widget show? Proposed default is the earlier start time, with a team switcher. |
 | 6 | Should officers be able to see, and assign within, the shift immediately following their own — you noted officers sometimes stay on. Proposed default is read-only visibility of the next shift on the same team. |
 | 7 | Retention: how many seasons of history should stay live before archival? |
