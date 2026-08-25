@@ -18,6 +18,10 @@ declare(strict_types=1);
  */
 
 use Resm\App;
+use Resm\Admin\Seasons;
+use Resm\Admin\Teams;
+use Resm\AdminMenu;
+use Resm\Auth\Capability;
 use Resm\Auth\Role;
 use Resm\Csrf;
 use Resm\Diagnostics;
@@ -134,6 +138,135 @@ $router->post('tools/pin', static function (App $app, Request $request): Respons
 
     return Response::redirect($app->url('tools?changed=1'));
 });
+
+// ---------------------------------------------------------------------------
+// Admin Menu (spec 6.10)
+//
+// Every handler calls Access::require for the capability its section declares.
+// The tile being visible is not the check; AdminMenu and the guard read the
+// same table so they cannot disagree, and the guard is what refuses.
+// ---------------------------------------------------------------------------
+
+$router->get('admin', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html((new View($app))->render('admin/index', [
+        'title' => 'Admin Menu',
+        'tiles' => AdminMenu::tilesFor($app, $user),
+        'season' => adminSeasons($app)->active(),
+        'back' => ['url' => $app->url(), 'label' => 'Menu'],
+    ]));
+});
+
+$router->get('admin/seasons', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ManageSeasons);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html(seasonsPage($app, notice: $request->input('created') !== null
+        ? 'Season created.'
+        : ($request->input('activated') !== null ? 'Active season changed.' : null)));
+});
+
+$router->post('admin/seasons', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ManageSeasons);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(seasonsPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $seasons = adminSeasons($app);
+
+    if ($request->input('action') === 'activate') {
+        $result = $seasons->activate($user, (int) $request->input('season_id', '0'));
+
+        return $result['ok']
+            ? Response::redirect($app->url('admin/seasons?activated=1'))
+            : Response::html(seasonsPage($app, error: $result['error']), 422);
+    }
+
+    $result = $seasons->create(
+        $user,
+        (string) $request->input('name', ''),
+        (string) $request->input('start_date', ''),
+        (string) $request->input('end_date', ''),
+    );
+
+    return $result['ok']
+        ? Response::redirect($app->url('admin/seasons?created=1'))
+        : Response::html(seasonsPage($app, error: $result['error']), 422);
+});
+
+$router->get('admin/teams', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ManageTeams);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html(teamsPage($app, notice: $request->input('done') !== null ? 'Saved.' : null));
+});
+
+$router->post('admin/teams', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ManageTeams);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(teamsPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return Response::html(teamsPage($app, error: 'There is no active season.'), 422);
+    }
+
+    $teams = adminTeams($app);
+    $action = (string) $request->input('action', '');
+    $teamId = (int) $request->input('team_id', '0');
+
+    $result = match ($action) {
+        'create' => $teams->create($user, (int) $season['id'], (string) $request->input('name', '')),
+        'rename' => $teams->rename($user, $teamId, (string) $request->input('name', '')),
+        'activate' => $teams->setActive($user, $teamId, true),
+        'deactivate' => $teams->setActive($user, $teamId, false),
+        default => ['ok' => false, 'error' => 'Unknown action.'],
+    };
+
+    return $result['ok']
+        ? Response::redirect($app->url('admin/teams?done=1'))
+        : Response::html(teamsPage($app, error: $result['error']), 422);
+});
+
+/*
+ * Admin sections the build sequence has not reached, behind the same guard the
+ * real screen will use.
+ */
+foreach (AdminMenu::SECTIONS as $adminKey => $adminSection) {
+    if ($adminSection['built']) {
+        continue;
+    }
+
+    $router->get('admin/' . $adminKey, static function (App $app, Request $request) use ($adminSection): Response {
+        $user = requireAdmin($app, $adminSection['capability']);
+        if (!$user instanceof Resm\Auth\Identity) {
+            return $user;
+        }
+
+        return Response::html((new View($app))->render('placeholder', [
+            'title' => $adminSection['label'],
+            'heading' => $adminSection['label'],
+            'summary' => $adminSection['summary'],
+            'phase' => $adminSection['phase'],
+            'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+        ]));
+    });
+}
 
 // ---------------------------------------------------------------------------
 // Screens the build sequence has not reached
@@ -257,6 +390,60 @@ $router->get('status', static function (App $app, Request $request): Response {
 $router->notFound(static fn (App $app): Response => notFoundResponse($app));
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Resolve the signed-in administrator, or the response to send instead.
+ *
+ * Returns an Identity when permitted, and a Response — a redirect to login, or
+ * the 403 an AccessDenied becomes — when not. Callers check the type rather
+ * than assuming, so a missing check is a type error rather than an open door.
+ */
+function requireAdmin(App $app, ?Capability $capability = null): Resm\Auth\Identity|Response
+{
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    Resm\Auth\Access::require($user, $capability ?? Capability::ManageSeasons);
+
+    return $user;
+}
+
+function adminSeasons(App $app): Seasons
+{
+    return new Seasons($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function adminTeams(App $app): Teams
+{
+    return new Teams($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function seasonsPage(App $app, ?string $error = null, ?string $notice = null): string
+{
+    return (new View($app))->render('admin/seasons', [
+        'title' => 'Seasons',
+        'seasons' => adminSeasons($app)->all(),
+        'error' => $error,
+        'notice' => $notice,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function teamsPage(App $app, ?string $error = null, ?string $notice = null): string
+{
+    $season = adminSeasons($app)->active();
+
+    return (new View($app))->render('admin/teams', [
+        'title' => 'Teams',
+        'season' => $season,
+        'teams' => $season === null ? [] : adminTeams($app)->forSeason((int) $season['id']),
+        'error' => $error,
+        'notice' => $notice,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
 
 function loginPage(App $app, ?string $error = null, string $memberId = ''): string
 {
