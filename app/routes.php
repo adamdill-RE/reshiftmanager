@@ -33,6 +33,9 @@ use Resm\Http\Request;
 use Resm\Http\Response;
 use Resm\Http\Router;
 use Resm\Menu;
+use Resm\Shift\Attendance;
+use Resm\Shift\CurrentShift;
+use Resm\Shift\Roster;
 use Resm\ShiftClock;
 use Resm\ShiftType;
 use Resm\View;
@@ -143,6 +146,147 @@ $router->post('tools/pin', static function (App $app, Request $request): Respons
     }
 
     return Response::redirect($app->url('tools?changed=1'));
+});
+
+// ---------------------------------------------------------------------------
+// Check In / Out (spec 6.4)
+// ---------------------------------------------------------------------------
+
+$router->get('check-in', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    return Response::html(checkInPage($app, $user, $request, (string) $request->input('shift', '')));
+});
+
+$router->post('check-in', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(checkInPage($app, $user, $request, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return Response::html(checkInPage($app, $user, $request, error: 'There is no active season.'), 422);
+    }
+
+    $wanted = (string) $request->input('shift_id', '');
+
+    // Resolved through the candidate list, so a shift he is not rostered on or
+    // that is outside the 5.3 window cannot be checked into by posting its id.
+    $shift = currentShift($app)->pick($user->id, (int) $season['id'], (int) $wanted);
+    if ($shift === null) {
+        return Response::html(
+            checkInPage($app, $user, $request, error: 'That is not a shift you can check into right now.'),
+            422
+        );
+    }
+
+    $result = attendance($app)->record(
+        $user,
+        $shift,
+        $user->id,
+        (string) $request->input('type', ''),
+    );
+
+    if (!$result['ok']) {
+        return Response::html(checkInPage($app, $user, $request, $wanted, error: $result['error']), 422);
+    }
+
+    // Redirect after posting, so a refresh on the tarmac does not re-record.
+    return Response::redirect($app->url(sprintf(
+        'check-in?shift=%d&at=%s&freed=%d',
+        (int) $shift['id'],
+        rawurlencode(($result['at'] ?? $app->now())->format('c')),
+        $result['vacated'],
+    )));
+});
+
+// ---------------------------------------------------------------------------
+// My Shift Status (spec 6.5) and My Shifts (spec 6.6)
+// ---------------------------------------------------------------------------
+
+$router->get('my-shift', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    return Response::html(myShiftPage($app, $user, $request));
+});
+
+$router->post('my-shift', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(myShiftPage($app, $user, $request, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return Response::html(myShiftPage($app, $user, $request, error: 'There is no active season.'), 422);
+    }
+
+    // Same guard as check-in: resolved through his own candidates, so a shift
+    // he is not rostered on cannot be reached by posting its id.
+    $shift = currentShift($app)->pick($user->id, (int) $season['id'], (int) $request->input('shift_id', '0'));
+    if ($shift === null) {
+        return Response::html(myShiftPage($app, $user, $request, error: 'That is not one of your shifts.'), 422);
+    }
+
+    $result = (string) $request->input('action', '') === 'lunch'
+        ? attendance($app)->setLunch($user, (int) $shift['id'], $user->id, (string) $request->input('state', ''))
+        : attendance($app)->record($user, $shift, $user->id, (string) $request->input('type', ''));
+
+    if (!$result['ok']) {
+        return Response::html(myShiftPage($app, $user, $request, error: $result['error']), 422);
+    }
+
+    return Response::redirect($app->url('my-shift?shift=' . (int) $shift['id'] . '&done=1'));
+});
+
+$router->get('my-shifts', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    $season = adminSeasons($app)->active();
+    $all = $season === null
+        ? []
+        : (new Roster($app->db()))->season($user->id, (int) $season['id']);
+
+    // Split on the end time rather than the start: a shift running now is
+    // still one of his, not history.
+    $now = $app->now()->format('Y-m-d H:i:s');
+    $upcoming = [];
+    $past = [];
+    foreach ($all as $shift) {
+        if ((string) $shift['ends_at'] > $now) {
+            $upcoming[] = $shift;
+        } else {
+            $past[] = $shift;
+        }
+    }
+    // Soonest first among what is still to come; the query returns newest
+    // first, which is right for history and backwards for a schedule.
+    $upcoming = array_reverse($upcoming);
+
+    return Response::html((new View($app))->render('my-shifts', [
+        'title' => 'My Shifts',
+        'season' => $season,
+        'upcoming' => $upcoming,
+        'past' => $past,
+        'clock' => new ShiftClock($app->displayTimezone()),
+        'back' => ['url' => $app->url(), 'label' => 'Menu'],
+    ]));
 });
 
 // ---------------------------------------------------------------------------
@@ -1017,6 +1161,125 @@ function importPage(App $app, ?string $error = null, ?string $notice = null): st
         'error' => $error,
         'notice' => $notice,
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function currentShift(App $app): CurrentShift
+{
+    return new CurrentShift($app->db(), $app->displayTimezone());
+}
+
+function attendance(App $app): Attendance
+{
+    return new Attendance($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function checkInPage(
+    App $app,
+    Resm\Auth\Identity $user,
+    ?Request $request = null,
+    string $wantedShift = '',
+    ?string $error = null,
+): string {
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $shifts = currentShift($app);
+
+    $resolved = $season === null
+        ? ['current' => null, 'candidates' => [], 'doubled' => false]
+        : $shifts->forUser($user->id, $seasonId);
+
+    // An explicit choice from the switcher wins over the resolved default,
+    // but only if it is genuinely one of his.
+    $shift = $resolved['current'];
+    if ($wantedShift !== '' && $season !== null) {
+        $picked = $shifts->pick($user->id, $seasonId, (int) $wantedShift);
+        if ($picked !== null) {
+            $shift = $picked;
+        }
+    }
+
+    $confirmed = null;
+    $at = $request?->input('at', '') ?? '';
+    if ($at !== '') {
+        try {
+            $confirmed = (new ShiftClock($app->displayTimezone()))
+                ->display(new DateTimeImmutable($at), 'D j M, H:i');
+        } catch (Throwable) {
+            // A hand-edited timestamp in the query string. The page is still
+            // correct without the confirmation line.
+            $confirmed = null;
+        }
+    }
+
+    return (new View($app))->render('check-in', [
+        'title' => 'Check In / Out',
+        'shift' => $shift,
+        'candidates' => $resolved['candidates'],
+        'clock' => new ShiftClock($app->displayTimezone()),
+        'confirmed' => $confirmed,
+        'vacated' => (int) ($request?->input('freed', '0') ?? 0),
+        'error' => $error,
+        'back' => ['url' => $app->url(), 'label' => 'Menu'],
+    ]);
+}
+
+function myShiftPage(
+    App $app,
+    Resm\Auth\Identity $user,
+    ?Request $request = null,
+    ?string $error = null,
+): string {
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $shifts = currentShift($app);
+
+    $resolved = $season === null
+        ? ['current' => null, 'candidates' => [], 'doubled' => false]
+        : $shifts->forUser($user->id, $seasonId);
+
+    $shift = $resolved['current'];
+    $wanted = (string) ($request?->input('shift', '') ?? '');
+    if ($wanted !== '' && $season !== null) {
+        $picked = $shifts->pick($user->id, $seasonId, (int) $wanted);
+        if ($picked !== null) {
+            $shift = $picked;
+        }
+    }
+
+    $assignment = null;
+    $mates = [];
+    $officers = [];
+
+    if ($shift !== null) {
+        $roster = new Roster($app->db());
+        $assignment = attendance($app)->assignments((int) $shift['id'], $user->id)[(string) $shift['current_phase']] ?? null;
+        $officers = $roster->officers((int) $shift['id']);
+
+        if ($assignment !== null) {
+            // The group id comes from the assignment itself. Looking it up by
+            // position label would be wrong: labels are unique within a group,
+            // not across them.
+            $mates = $roster->groupMates(
+                (int) $shift['id'],
+                (string) $shift['current_phase'],
+                $user->id,
+                (int) $assignment['group_id']
+            );
+        }
+    }
+
+    return (new View($app))->render('my-shift', [
+        'title' => 'My Shift Status',
+        'shift' => $shift,
+        'candidates' => $resolved['candidates'],
+        'assignment' => $assignment,
+        'mates' => $mates,
+        'officers' => $officers,
+        'clock' => new ShiftClock($app->displayTimezone()),
+        'error' => $error,
+        'notice' => ($request?->input('done') !== null) ? 'Saved.' : null,
+        'back' => ['url' => $app->url(), 'label' => 'Menu'],
     ]);
 }
 

@@ -35,6 +35,7 @@ Version 2.0  ·  August 2026
   - [5.2 Phase toggling — resolved rule](#52-phase-toggling--resolved-rule)
   - [5.3 Shift visibility window](#53-shift-visibility-window)
   - [5.4 Active groups per shift](#54-active-groups-per-shift)
+  - [5.5 One committeeman, two shifts in a day](#55-one-committeeman-two-shifts-in-a-day)
 - [6. Screen Specifications](#6-screen-specifications)
   - [6.1 Login](#61-login)
   - [6.2 Main Menu](#62-main-menu)
@@ -233,6 +234,29 @@ Short staffing does not trim groups either. It thins them: one runner at Reed Ro
 
 That leaves the counter, which was the real problem behind this section. "70 open of 95" is worthless whether or not groups are trimmed. Two figures replace it: **critical coverage**, which is the staffing floor and is allowed to read red because on a short night it is telling the truth, and **placed against present**, which says how many people who have checked in are standing without a position. Raw open counts survive only as a per-group breakdown an officer can open on purpose.
 
+### 5.5 One committeeman, two shifts in a day
+
+**Answered.** It happens. A man on two teams works both, sometimes back to back and sometimes overlapping, and the two cases behave differently.
+
+**Back to back is not a problem.** Team B until 16:45 and Team C from 16:45 is a handover: at every instant there is exactly one true answer to "what is my shift". Section 6.10.5 already treats shifts that touch at the edges as a handover rather than an overlap, and warns about neither.
+
+**Genuine overlap is the case that needs a rule.** Team B running 08:00–18:00 against Team C running 16:45–02:00 leaves 75 minutes where both shifts are live — at shift change, the busiest moment of the day. Nothing upstream catches it: the overlap warning in 6.10.5 is scoped to one team, and these are two. The visibility window in 5.3 does not disambiguate either; it is wider than either shift, so on that Saturday both are enterable from midnight.
+
+**Which shift is the current one.** Among the shifts a user is rostered on inside the 5.3 window:
+
+1. A shift that has already ended is never the current one, checked out or not. This is what stops a forgotten check-out pinning the widget to a dead shift for the rest of the night.
+2. Otherwise, prefer a shift the user is checked into and has not checked out of.
+3. If that leaves more than one, the earlier start wins **and the widget says he is on two**. Being in two places at once is a state to surface, not to resolve quietly.
+4. If it leaves none, the one starting soonest.
+
+A team switcher lets him look at the other shift. It changes the view only, never the check-in state.
+
+**The handover is self-healing.** Checking out already vacates a user's positions in both phases (6.4). So the moment he checks out of Team B, Reed Starter 1 falls vacant on Team B's board — and being critical, turns red and pins to the top — while his own widget moves to Team C. The officer he is leaving finds out immediately, and nobody had to coordinate it.
+
+That is why check-out, rather than the scheduled end time, is what moves him on. A shift ends on a schedule; a man finishes when he walks away.
+
+**The officer he is joining is warned** — see rule 7 in 6.9.4. Neither officer can see the other's board, because team scope forbids it (2.2). The server is the only party that knows both facts, so the server is what says so.
+
 ## 6. Screen Specifications
 
 ### 6.1 Login
@@ -282,6 +306,7 @@ The committeeman's home base during a shift.
 - Lunch status with a three-state toggle.
 - Quick link to the Tarmac Map, with the user's own position highlighted.
 - All officers assigned to this shift, each with a tap-to-call button.
+- A team switcher, shown only to someone rostered on two shifts in the 5.3 window. It changes which shift the screen describes; it never checks anyone in or out.
 - Entire screen is cached for offline viewing. When offline it renders the last known state with a clear staleness banner.
 
 ### 6.6 My Shifts
@@ -351,6 +376,7 @@ Rules enforced by the server on every write:
 4. Positions may be left vacant, and a filled position may be vacated at any time to free that person for another spot.
 5. Only checked-in committeemen appear as available.
 6. A person marked At Lunch is vacated from their position and returns to the available pool.
+7. Assigning someone who currently holds a position in another shift **overlapping this one** is permitted, and warned: the sheet names the other team and when that shift ends. Working two teams on one Saturday is normal (5.5); the same man standing in two places at 17:00 is not. Neither officer can see the other's board, so this warning is the only place the conflict is visible to anyone.
 
 Officer aids on both screens:
 
@@ -757,7 +783,7 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | 2 | Do forklift and golf cart certifications correspond to any tarmac positions, or are they reference-only? |
 | 3 | Does "Crosswalk Middle" mean the Naomi Center Starter and Holly Hall Center positions, or something else? |
 | ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. Reed Road carries a single critical Computer and Counter for the group rather than one per gate: Reed and Employee can run from one gate when short, which is a management change on the ground rather than a second critical pair. |
-| 5 | A committeeman on two teams: if both teams somehow have shifts on the same date, which shift does his widget show? Proposed default is the earlier start time, with a team switcher. |
+| ~~5~~ | **Answered.** It happens, and the resolution rule is in Section 5.5. Current shift is the one he is checked into and has not left, ended shifts excluded; ties go to the earlier start and are shown as a double. Check-out is what moves him on, not the clock, and it vacates his old position in the same moment. The officer taking him on is warned (6.9.4 rule 7). |
 | 6 | Should officers be able to see, and assign within, the shift immediately following their own — you noted officers sometimes stay on. Proposed default is read-only visibility of the next shift on the same team. |
 | 7 | Retention: how many seasons of history should stay live before archival? |
 | 8 | Is there a Rodeo Express or committee logo to use in place of the wordmark on the login screen? |

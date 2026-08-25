@@ -571,3 +571,107 @@ details[open] > .disclosure::before {
     outline-offset: 2px;
     border-radius: var(--radius);
 }
+
+/* ---------------------------------------------------------------------------
+   Status widget (spec 6.3) — the most-viewed element in the product, and the
+   one that has to be readable at arm's length in Houston sunlight. Few things,
+   large, with the state carried by a border rather than by colour alone.
+   --------------------------------------------------------------------------- */
+
+.widget {
+    border: 2px solid var(--border);
+    border-left-width: 8px;
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.75rem 1rem;
+    margin-bottom: var(--touch-gap);
+}
+
+.widget--in {
+    border-color: var(--ok);
+}
+
+.widget--out {
+    border-color: var(--text-muted);
+}
+
+.widget__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.widget__state {
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 0.95rem;
+}
+
+.widget--in .widget__state {
+    color: var(--ok);
+}
+
+.widget__team {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+/* The one line a committeeman actually reads. */
+.widget__assignment {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0.35rem 0;
+}
+
+.widget__meta {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.widget__fresh {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Past a minute the page is old enough that it must stop looking live. */
+.widget__fresh--stale {
+    color: var(--warn);
+    font-weight: 600;
+}
+
+.widget__note {
+    margin: 0.5rem 0 0;
+    color: var(--warn);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* A message pinned to every committeeman on the shift (spec 6.9.10). */
+.broadcast {
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--accent-text);
+    padding: 0.75rem 1rem;
+    margin-bottom: var(--touch-gap);
+    font-weight: 600;
+}
+
+/* Check In / Out (spec 6.4): one target, impossible to miss with gloves on. */
+.check-button {
+    width: 100%;
+    min-height: 96px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* My Shift Status (spec 6.5): the position is the one thing a committeeman
+   opens this screen to read, so it is the largest thing on it. */
+.assignment {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
