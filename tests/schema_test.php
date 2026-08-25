@@ -56,11 +56,14 @@ test('157 position-phase records split 62 Unload and 95 Bump and Run', function 
     assertSame(95, (int) $db->value("SELECT COUNT(*) FROM position_phase WHERE phase = 'bump_run'"));
 });
 
-test('22 positions need a radio and 23 are critical', function (): void {
-    $db = testDb();
-    assertSame(22, (int) $db->value('SELECT COUNT(*) FROM position WHERE is_radio = 1'));
-    assertSame(23, (int) $db->value('SELECT COUNT(DISTINCT position_id) FROM position_phase WHERE is_critical = 1'));
+test('22 positions need a radio', function (): void {
+    assertSame(22, (int) testDb()->value('SELECT COUNT(*) FROM position WHERE is_radio = 1'));
 });
+
+// Criticality moved out of this file when open item 4 came back and changed it
+// from 23 positions to 39 (migration 004). It is asserted against the spec
+// table itself in position_matrix_test.php, so there is one place to change
+// when Rodeo Express revises the set again — not two that can disagree.
 
 test('only the three Unload group positions accept multiple people', function (): void {
     $db = testDb();

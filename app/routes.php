@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 use Resm\App;
 use Resm\Admin\Seasons;
+use Resm\Admin\Shifts;
 use Resm\Admin\Teams;
 use Resm\Admin\Users;
 use Resm\AdminMenu;
@@ -30,6 +31,8 @@ use Resm\Http\Request;
 use Resm\Http\Response;
 use Resm\Http\Router;
 use Resm\Menu;
+use Resm\ShiftClock;
+use Resm\ShiftType;
 use Resm\View;
 
 $router = new Router();
@@ -340,6 +343,137 @@ foreach (['committeemen', 'officers'] as $userKey) {
 }
 
 /*
+ * Create Shifts (spec 6.10.5).
+ *
+ * One form does both a single night and a whole pattern, because they differ
+ * only in which dates they resolve to — the team, type, hours and groups are
+ * the same decision either way.
+ */
+$router->get('admin/shifts', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::CreateShifts);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $team = $request->input('team', '');
+
+    return Response::html(shiftsPage(
+        $app,
+        filterTeam: is_string($team) && $team !== '' ? (int) $team : null,
+        notice: $request->input('done') !== null ? 'Saved.' : null,
+    ));
+});
+
+$router->post('admin/shifts', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::CreateShifts);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(shiftsPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return Response::html(shiftsPage($app, error: 'There is no active season.'), 422);
+    }
+
+    $shifts = adminShifts($app);
+    $seasonId = (int) $season['id'];
+    $action = (string) $request->input('action', 'create');
+    $groupIds = $request->inputList('group_ids');
+
+    if ($action === 'groups') {
+        $result = $shifts->setGroups($user, (int) $request->input('shift_id', '0'), $groupIds);
+
+        return $result['ok']
+            ? Response::redirect($app->url('admin/shifts?done=1'))
+            : Response::html(shiftsPage($app, error: $result['error']), 422);
+    }
+
+    if ($action === 'delete') {
+        $result = $shifts->delete($user, (int) $request->input('shift_id', '0'));
+
+        return $result['ok']
+            ? Response::redirect($app->url('admin/shifts?done=1'))
+            : Response::html(shiftsPage($app, error: $result['error']), 422);
+    }
+
+    $teamId = (int) $request->input('team_id', '0');
+    $type = (string) $request->input('shift_type', '');
+    $startTime = (string) $request->input('start_time', '');
+    $endTime = (string) $request->input('end_time', '');
+    $weekdays = $request->inputList('weekdays');
+
+    // Everything typed comes back with the message. A rejected range is a lot
+    // of choices to make twice.
+    $form = [
+        'team_id' => $teamId,
+        'shift_type' => $type,
+        'start_time' => $startTime,
+        'end_time' => $endTime,
+        'mode' => (string) $request->input('mode', 'single'),
+        'date' => (string) $request->input('date', ''),
+        'from_date' => (string) $request->input('from_date', ''),
+        'to_date' => (string) $request->input('to_date', ''),
+        'weekdays' => $weekdays,
+        'group_ids' => $groupIds,
+    ];
+
+    if ($form['mode'] === 'range') {
+        $result = $shifts->createRange(
+            $user,
+            $seasonId,
+            $teamId,
+            $type,
+            (string) $form['from_date'],
+            (string) $form['to_date'],
+            $weekdays,
+            $startTime,
+            $endTime,
+            $groupIds,
+        );
+
+        if (!$result['ok']) {
+            return Response::html(shiftsPage($app, error: $result['error'], form: $form), 422);
+        }
+
+        $summary = sprintf(
+            'Created %d shift%s.',
+            $result['created'],
+            $result['created'] === 1 ? '' : 's'
+        );
+
+        return Response::html(shiftsPage(
+            $app,
+            notice: trim($summary . ' ' . (string) $result['notice']),
+            filterTeam: $teamId,
+        ));
+    }
+
+    $result = $shifts->create(
+        $user,
+        $seasonId,
+        $teamId,
+        $type,
+        (string) $form['date'],
+        $startTime,
+        $endTime,
+        $groupIds,
+    );
+
+    if (!$result['ok']) {
+        return Response::html(shiftsPage($app, error: $result['error'], form: $form), 422);
+    }
+
+    return Response::html(shiftsPage(
+        $app,
+        notice: trim('Shift created. ' . (string) $result['notice']),
+        filterTeam: $teamId,
+    ));
+});
+
+/*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.
  */
@@ -625,6 +759,50 @@ function usersPage(
         'form' => $form,
         'error' => $error,
         'notice' => $notice,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function adminShifts(App $app): Shifts
+{
+    return new Shifts(
+        $app->db(),
+        new Resm\AuditLog($app->db()),
+        new ShiftClock($app->displayTimezone()),
+    );
+}
+
+function shiftsPage(
+    App $app,
+    ?string $error = null,
+    ?string $notice = null,
+    ?int $filterTeam = null,
+    array $form = [],
+): string {
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $shifts = adminShifts($app);
+
+    return (new View($app))->render('admin/shifts', [
+        'title' => 'Create Shifts',
+        'season' => $season,
+        // Only active teams can take a new shift, same rule as team assignment.
+        'teams' => $season === null
+            ? []
+            : array_values(array_filter(
+                adminTeams($app)->forSeason($seasonId),
+                static fn (array $t): bool => (int) $t['is_active'] === 1
+            )),
+        'groups' => $shifts->allGroups(),
+        'defaultGroups' => $shifts->defaultGroupIds(),
+        'types' => ShiftType::all(),
+        'shifts' => $season === null ? [] : $shifts->forSeason($seasonId, $filterTeam),
+        'clock' => new ShiftClock($app->displayTimezone()),
+        'filterTeam' => $filterTeam,
+        'form' => $form,
+        'error' => $error,
+        'notice' => $notice === '' ? null : $notice,
+        'scripts' => ['js/shift-form.js'],
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
     ]);
 }

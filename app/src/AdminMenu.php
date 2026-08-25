@@ -59,11 +59,9 @@ final class AdminMenu
             'label' => 'Create Shifts',
             'sub' => 'Per team, in bulk over a date range',
             'capability' => Capability::CreateShifts,
-            'built' => false,
-            'summary' => 'A shift belongs to a team and carries a type, a start and end, and '
-                . 'the position groups actually staffed on it. Shift patterns repeat across '
-                . 'the season, so a date range creates them in one pass.',
-            'phase' => 'Next, in phase 2.',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'import' => [
             'label' => 'Import Roster',

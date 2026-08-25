@@ -133,7 +133,11 @@ jobs:
           php bin/migrate.php | tee /tmp/second-run.txt
           grep -q 'up to date' /tmp/second-run.txt
 
-      - name: Confirm the position seed still matches the specification
+      # Guards the generated artefact this script still owns. The whole applied
+      # matrix — every position and flag, across all four migrations — is
+      # checked against the same spec table by tests/position_matrix_test.php,
+      # which reads the database instead of diffing SQL.
+      - name: Confirm criticality still matches the specification
         run: php bin/gen-position-seed.php --check
 
       - name: Run tests
