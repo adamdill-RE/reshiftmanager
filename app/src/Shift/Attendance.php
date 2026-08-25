@@ -135,8 +135,8 @@ final class Attendance
     public function assignments(int $shiftId, int $userId): array
     {
         $rows = $this->db->all(
-            'SELECT a.phase, a.is_inherited, p.label AS position, p.definition, g.label AS group_label,
-                    pp.is_critical
+            'SELECT a.phase, a.is_inherited, p.label AS position, p.definition,
+                    g.id AS group_id, g.label AS group_label, pp.is_critical
              FROM assignment a
              JOIN position p ON p.id = a.position_id
              JOIN position_group g ON g.id = p.group_id
@@ -151,6 +151,77 @@ final class Attendance
         }
 
         return $byPhase;
+    }
+
+    /**
+     * Move someone through the three lunch states (spec 6.9.9).
+     *
+     * Going to lunch vacates the position, because a spot held by a man who is
+     * eating is a spot the board says is covered and is not. Coming back does
+     * NOT restore it: the officer places him again deliberately, which is also
+     * what stops two people being put on one position by a return nobody saw.
+     *
+     * @return array{ok: bool, error: ?string, at: ?DateTimeImmutable, vacated: int}
+     */
+    public function setLunch(
+        Identity $actor,
+        int $shiftId,
+        int $subjectId,
+        string $state,
+        ?DateTimeImmutable $now = null,
+    ): array {
+        if (!in_array($state, ['not_yet', 'at_lunch', 'done'], true)) {
+            return self::fail('That is not a lunch state.');
+        }
+
+        $now ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $vacated = 0;
+
+        $this->db->transaction(function (Database $db) use (
+            $shiftId, $subjectId, $state, $actor, $now, &$vacated
+        ): void {
+            $db->execute(
+                'INSERT INTO lunch_event (shift_id, user_id, state, occurred_at, recorded_by)
+                 VALUES (:shift_id, :user_id, :state, :occurred_at, :recorded_by)',
+                [
+                    'shift_id' => $shiftId,
+                    'user_id' => $subjectId,
+                    'state' => $state,
+                    'occurred_at' => $now->format('Y-m-d H:i:s'),
+                    'recorded_by' => $actor->id,
+                ]
+            );
+
+            if ($state === 'at_lunch') {
+                $vacated = $db->execute(
+                    'UPDATE assignment
+                        SET is_current = 0, vacated_at = :vacated_at
+                      WHERE shift_id = :shift_id AND user_id = :user_id AND is_current = 1',
+                    [
+                        'vacated_at' => $now->format('Y-m-d H:i:s'),
+                        'shift_id' => $shiftId,
+                        'user_id' => $subjectId,
+                    ]
+                );
+            }
+
+            $db->execute(
+                'UPDATE state_version SET version = version + 1 WHERE shift_id = :shift_id',
+                ['shift_id' => $shiftId]
+            );
+        });
+
+        $this->audit->record(
+            $actor->id,
+            'lunch_' . $state,
+            'user',
+            $subjectId,
+            null,
+            ['shift_id' => $shiftId, 'vacated' => $vacated],
+            $shiftId
+        );
+
+        return ['ok' => true, 'error' => null, 'at' => $now, 'vacated' => $vacated];
     }
 
     /** The broadcast pinned to this shift, if any is live (spec 6.9.10). */

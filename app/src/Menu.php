@@ -60,20 +60,18 @@ final class Menu
             'icon' => 'pin',
             'sub' => 'Where you are standing',
             'role' => Role::Committeeman,
-            'built' => false,
-            'summary' => 'Your assignment in large type, everyone else in your group with '
-                . 'tap-to-call, your lunch status, the tarmac map, and the officers on this shift.',
-            'phase' => 'Phase 3 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'my-shifts' => [
             'label' => 'My Shifts',
             'icon' => 'calendar',
             'sub' => 'This season',
             'role' => Role::Committeeman,
-            'built' => false,
-            'summary' => 'Every shift assigned to you this season, with the times you checked '
-                . 'in and out of the ones already worked.',
-            'phase' => 'Phase 3 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'information' => [
             'label' => 'Rodeo Information',
