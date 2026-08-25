@@ -225,7 +225,13 @@ A team can enter an assigned shift from 00:00 on the shift start date through 04
 
 ### 5.4 Active groups per shift
 
-**New in v2 — needs your input.**  The Bump and Run board holds 95 positions, but a shift may run as few as 25 people. Without knowing which groups are actually staffed, an "open positions" count would read "70 open" on a normal night and be worthless. Therefore each shift carries a set of active position groups, chosen when the shift is created and adjustable by an officer during the shift. Open-position and critical-coverage counts are computed only across active groups.
+**Answered.** All ten groups are active by default on every shift type, and a shift still carries its own set so an officer can trim it during the shift.
+
+Shift type turned out to decide almost nothing here. The phase matrix already filters positions per phase — the Unload group exists only in Unload, and OST, West Loop, Monroe and Maxey only in Bump and Run — and Rodeo Express confirmed that every group present in Unload except the Unload group itself is also staffed in Bump and Run, and that the four route stops are always open. What is left for a per-shift set to express is weather and closures, which is a during-shift decision, not a creation-time one.
+
+Short staffing does not trim groups either. It thins them: one runner at Reed Road instead of four. The matrix already encodes that order — the numbered siblings within a group are the depth beyond its critical core — so shortfall needs no configuration at all.
+
+That leaves the counter, which was the real problem behind this section. "70 open of 95" is worthless whether or not groups are trimmed. Two figures replace it: **critical coverage**, which is the staffing floor and is allowed to read red because on a short night it is telling the truth, and **placed against present**, which says how many people who have checked in are standing without a position. Raw open counts survive only as a per-group breakdown an officer can open on purpose.
 
 ## 6. Screen Specifications
 
@@ -312,9 +318,9 @@ A persistent bar visible to Officers and Admins only, on every Officer Menu scre
 | Not checked in | Roster members with no check-in event on this shift. Equivalent to Absent. |
 | Assigned | Checked-in members currently holding a position in the active phase. |
 | Open | Vacant positions in the active phase, counted only across the shift's active groups (Section 5.4). |
-| Critical covered | Filled ÷ total positions flagged is_critical for the active phase, within active groups. Renders red when any critical position is vacant. |
+| Critical covered | Filled ÷ total positions flagged is_critical for the active phase, within active groups. Renders red when any critical position is vacant — which on a short night is the truth and not an error, since Bump and Run has 37 critical positions and a shift can run 25 people. |
 
-*Example rendering: 58 in · 12 out · 51 assigned · 7 open · Critical 13/14*
+*Example rendering: 58 in · 12 out · 51 assigned · Critical 35/37*
 
 #### 6.9.3 View Roster
 
@@ -477,19 +483,21 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 
 ### 8.1 Group summary
 
-| Group | Positions | Unload | B&R | Carry-forward |
-| --- | --- | --- | --- | --- |
-| General | 16 | 16 | 16 | Yes |
-| Naomi Crosswalk | 13 | 13 | 13 | Yes |
-| Holly Hall Crosswalk | 6 | 6 | 6 | Yes |
-| Reed Road | 15 | 15 | 15 | Yes |
-| Gold Badge / LT | 9 | 9 | 9 | Yes |
-| Unload | 3 | 3 | — | No |
-| OST | 11 | — | 11 | No |
-| West Loop | 9 | — | 9 | No |
-| Monroe | 9 | — | 9 | No |
-| Maxey | 7 | — | 7 | No |
-| TOTAL | 98 | 62 | 95 |  |
+| Group | Positions | Unload | B&R | Carry-forward | Critical |
+| --- | --- | --- | --- | --- | --- |
+| General | 16 | 16 | 16 | Yes | 4 |
+| Naomi Crosswalk | 13 | 13 | 13 | Yes | 5 |
+| Holly Hall Crosswalk | 6 | 6 | 6 | Yes | 4 |
+| Reed Road | 15 | 15 | 15 | Yes | 4 |
+| Gold Badge / LT | 9 | 9 | 9 | Yes | 4 |
+| Unload | 3 | 3 | — | No | 2 |
+| OST | 11 | — | 11 | No | 4 |
+| West Loop | 9 | — | 9 | No | 4 |
+| Monroe | 9 | — | 9 | No | 4 |
+| Maxey | 7 | — | 7 | No | 4 |
+| TOTAL | 98 | 62 | 95 |  | 39 |
+
+Criticality does not vary by phase: one list, applied to whichever phases a position exists in. That gives **23 critical positions in Unload and 37 in Bump and Run** — the floor below which a shift runs but barely.
 
 **Restored in v2:**  The Holly Hall Crosswalk group was referenced in v1's carry-forward rule but its positions were never listed. It is now defined as Holly Hall Center (Radio) plus Holly Hall 1 through 5, present in both phases and carrying forward.
 
@@ -502,9 +510,9 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | Carry | Assignment in Unload auto-populates the same person into the same position in Bump and Run, until overridden. |
 | Critical | Counts toward the "Critical covered" figure. Vacant critical positions are pinned to the top of the assign board in red. Configurable per position per phase. |
 
-*Critical flags below are a proposed starting set — every Lead, every Starter that anchors a lane, every Computer, and both crosswalk Centers. Please review and adjust; the Position Matrix Editor makes this changeable at any time.*
+*Critical flags below are confirmed by Rodeo Express (open item 4). The shape is one Starter, one Computer, one Counter and one Runner per lane or stop, the four General leads, and the crosswalk Centers with their inner perimeter. Woodlands and Special Events Starters are deliberately not critical — an adjacent worker covers them when people are short. Reed Road carries one Computer and one Counter for the group, not one per gate. The Position Matrix Editor makes all of this changeable at any time.*
 
-**Proposed critical positions: 23 of 98.**
+**Critical positions: 39 of 98 — 23 in Unload, 37 in Bump and Run.**
 
 ### 8.3 Full position list
 
@@ -522,15 +530,15 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | General | Bus Caller 2 | Unload + B&R | Y |  | Y |  |
 | General | Curve 1 | Unload + B&R | Y |  | Y | Y |
 | General | Curve 2 | Unload + B&R | Y |  | Y |  |
-| General | Woodlands Starter | Unload + B&R | Y |  | Y | Y |
+| General | Woodlands Starter | Unload + B&R | Y |  | Y |  |
 | General | Woodlands Runner | Unload + B&R |  |  | Y |  |
-| General | Special Events Starter | Unload + B&R | Y |  | Y | Y |
+| General | Special Events Starter | Unload + B&R | Y |  | Y |  |
 | General | Special Events Runner | Unload + B&R |  |  | Y |  |
 | Naomi Crosswalk | Center Starter | Unload + B&R | Y |  | Y | Y |
-| Naomi Crosswalk | Naomi Crosswalk Perimeter 1 | Unload + B&R |  |  | Y |  |
-| Naomi Crosswalk | Naomi Crosswalk Perimeter 2 | Unload + B&R |  |  | Y |  |
-| Naomi Crosswalk | Naomi Crosswalk Perimeter 3 | Unload + B&R |  |  | Y |  |
-| Naomi Crosswalk | Naomi Crosswalk Perimeter 4 | Unload + B&R |  |  | Y |  |
+| Naomi Crosswalk | Naomi Crosswalk Perimeter 1 | Unload + B&R |  |  | Y | Y |
+| Naomi Crosswalk | Naomi Crosswalk Perimeter 2 | Unload + B&R |  |  | Y | Y |
+| Naomi Crosswalk | Naomi Crosswalk Perimeter 3 | Unload + B&R |  |  | Y | Y |
+| Naomi Crosswalk | Naomi Crosswalk Perimeter 4 | Unload + B&R |  |  | Y | Y |
 | Naomi Crosswalk | Naomi Crosswalk Perimeter 5 | Unload + B&R |  |  | Y |  |
 | Naomi Crosswalk | Naomi Crosswalk Perimeter 6 | Unload + B&R |  |  | Y |  |
 | Naomi Crosswalk | Naomi Bridge 1 | Unload + B&R |  |  | Y |  |
@@ -540,20 +548,20 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | Naomi Crosswalk | Naomi Bridge 5 | Unload + B&R |  |  | Y |  |
 | Naomi Crosswalk | Naomi Bridge 6 | Unload + B&R |  |  | Y |  |
 | Holly Hall Crosswalk | Holly Hall Center | Unload + B&R | Y |  | Y | Y |
-| Holly Hall Crosswalk | Holly Hall 1 | Unload + B&R |  |  | Y |  |
-| Holly Hall Crosswalk | Holly Hall 2 | Unload + B&R |  |  | Y |  |
-| Holly Hall Crosswalk | Holly Hall 3 | Unload + B&R |  |  | Y |  |
+| Holly Hall Crosswalk | Holly Hall 1 | Unload + B&R |  |  | Y | Y |
+| Holly Hall Crosswalk | Holly Hall 2 | Unload + B&R |  |  | Y | Y |
+| Holly Hall Crosswalk | Holly Hall 3 | Unload + B&R |  |  | Y | Y |
 | Holly Hall Crosswalk | Holly Hall 4 | Unload + B&R |  |  | Y |  |
 | Holly Hall Crosswalk | Holly Hall 5 | Unload + B&R |  |  | Y |  |
 | Reed Road | Reed Starter 1 | Unload + B&R | Y |  | Y | Y |
 | Reed Road | Reed Starter 2 | Unload + B&R | Y |  | Y |  |
 | Reed Road | Reed Computer | Unload + B&R |  |  | Y | Y |
-| Reed Road | Employee Computer | Unload + B&R |  |  | Y | Y |
-| Reed Road | Reed Counter 1 | Unload + B&R |  |  | Y |  |
+| Reed Road | Employee Computer | Unload + B&R |  |  | Y |  |
+| Reed Road | Reed Counter 1 | Unload + B&R |  |  | Y | Y |
 | Reed Road | Reed Counter 2 | Unload + B&R |  |  | Y |  |
 | Reed Road | Employee Counter 1 | Unload + B&R |  |  | Y |  |
 | Reed Road | Employee Counter 2 | Unload + B&R |  |  | Y |  |
-| Reed Road | Reed/Employee Runner 1 | Unload + B&R |  |  | Y |  |
+| Reed Road | Reed/Employee Runner 1 | Unload + B&R |  |  | Y | Y |
 | Reed Road | Reed/Employee Runner 2 | Unload + B&R |  |  | Y |  |
 | Reed Road | Reed/Employee Runner 3 | Unload + B&R |  |  | Y |  |
 | Reed Road | Reed/Employee Runner 4 | Unload + B&R |  |  | Y |  |
@@ -563,9 +571,9 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | Gold Badge / LT | GB/LT Starter 1 | Unload + B&R | Y |  | Y | Y |
 | Gold Badge / LT | GB/LT Starter 2 | Unload + B&R | Y |  | Y |  |
 | Gold Badge / LT | GB/LT Computer | Unload + B&R |  |  | Y | Y |
-| Gold Badge / LT | GB/LT Counter 1 | Unload + B&R |  |  | Y |  |
+| Gold Badge / LT | GB/LT Counter 1 | Unload + B&R |  |  | Y | Y |
 | Gold Badge / LT | GB/LT Counter 2 | Unload + B&R |  |  | Y |  |
-| Gold Badge / LT | GB/LT Runner 1 | Unload + B&R |  |  | Y |  |
+| Gold Badge / LT | GB/LT Runner 1 | Unload + B&R |  |  | Y | Y |
 | Gold Badge / LT | GB/LT Runner 2 | Unload + B&R |  |  | Y |  |
 | Gold Badge / LT | GB/LT Runner 3 | Unload + B&R |  |  | Y |  |
 | Gold Badge / LT | GB/LT Back of Tent | Unload + B&R |  |  | Y |  |
@@ -575,9 +583,9 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | OST | OST Starter 1 | B&R only | Y |  |  | Y |
 | OST | OST Starter 2 | B&R only | Y |  |  |  |
 | OST | OST Computer | B&R only |  |  |  | Y |
-| OST | OST Counter 1 | B&R only |  |  |  |  |
+| OST | OST Counter 1 | B&R only |  |  |  | Y |
 | OST | OST Counter 2 | B&R only |  |  |  |  |
-| OST | OST Runner 1 | B&R only |  |  |  |  |
+| OST | OST Runner 1 | B&R only |  |  |  | Y |
 | OST | OST Runner 2 | B&R only |  |  |  |  |
 | OST | OST Runner 3 | B&R only |  |  |  |  |
 | OST | OST Runner 4 | B&R only |  |  |  |  |
@@ -586,26 +594,26 @@ Ten position groups spanning 98 unique positions. Because the four shared groups
 | West Loop | WL Starter 1 | B&R only | Y |  |  | Y |
 | West Loop | WL Starter 2 | B&R only | Y |  |  |  |
 | West Loop | WL Computer | B&R only |  |  |  | Y |
-| West Loop | WL Counter 1 | B&R only |  |  |  |  |
+| West Loop | WL Counter 1 | B&R only |  |  |  | Y |
 | West Loop | WL Counter 2 | B&R only |  |  |  |  |
-| West Loop | WL Runner 1 | B&R only |  |  |  |  |
+| West Loop | WL Runner 1 | B&R only |  |  |  | Y |
 | West Loop | WL Runner 2 | B&R only |  |  |  |  |
 | West Loop | WL Back Gate 1 | B&R only |  |  |  |  |
 | West Loop | WL Back Gate 2 | B&R only |  |  |  |  |
 | Monroe | Monroe Starter 1 | B&R only | Y |  |  | Y |
 | Monroe | Monroe Starter 2 | B&R only | Y |  |  |  |
 | Monroe | Monroe Computer | B&R only |  |  |  | Y |
-| Monroe | Monroe Counter 1 | B&R only |  |  |  |  |
+| Monroe | Monroe Counter 1 | B&R only |  |  |  | Y |
 | Monroe | Monroe Counter 2 | B&R only |  |  |  |  |
-| Monroe | Monroe Runner 1 | B&R only |  |  |  |  |
+| Monroe | Monroe Runner 1 | B&R only |  |  |  | Y |
 | Monroe | Monroe Runner 2 | B&R only |  |  |  |  |
 | Monroe | Monroe Back Gate 1 | B&R only |  |  |  |  |
 | Monroe | Monroe Back Gate 2 | B&R only |  |  |  |  |
 | Maxey | Maxey Starter | B&R only | Y |  |  | Y |
 | Maxey | Maxey Computer | B&R only |  |  |  | Y |
-| Maxey | Maxey Counter 1 | B&R only |  |  |  |  |
+| Maxey | Maxey Counter 1 | B&R only |  |  |  | Y |
 | Maxey | Maxey Counter 2 | B&R only |  |  |  |  |
-| Maxey | Maxey Runner 1 | B&R only |  |  |  |  |
+| Maxey | Maxey Runner 1 | B&R only |  |  |  | Y |
 | Maxey | Maxey Runner 2 | B&R only |  |  |  |  |
 | Maxey | Maxey Back Gate | B&R only |  |  |  |  |
 
@@ -726,8 +734,8 @@ Two officers will assign at the same time. The server is the sole authority.
 | "What's this?" definitions | One or two sentences per position, or per position family where positions are interchangeable (e.g. one definition covering Naomi Bridge 1–6). Roughly 30–40 distinct write-ups rather than 98. |
 | Tarmac map | See Section 11.4 below. |
 | Rodeo Information | Content structure and copy for the menu. |
-| Critical position review | Confirm or amend the 23 proposed critical positions in Section 8.3, per phase. |
-| Default active groups | Which position groups are normally staffed for each of the three shift types. |
+| ~~Critical position review~~ | **Received.** 39 critical positions, Section 8.3. Criticality does not differ between phases. |
+| ~~Default active groups~~ | **Received.** All ten groups, every shift type; see Section 5.4. |
 | Skill mapping confirmation | Crosswalk Middle mapping, and whether forklift and golf cart correspond to any positions. |
 
 ### 11.4 Tarmac map — what to supply
@@ -745,10 +753,10 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 
 | # | Question |
 | --- | --- |
-| 1 | Which position groups are staffed by default on each shift type? Without this the "open positions" count cannot be meaningful on its first run. |
+| ~~1~~ | **Answered.** All ten groups, on every shift type — the phase matrix already does the per-phase filtering and the four route stops always run. See Section 5.4, which also re-scopes the count this question was asked in service of. |
 | 2 | Do forklift and golf cart certifications correspond to any tarmac positions, or are they reference-only? |
 | 3 | Does "Crosswalk Middle" mean the Naomi Center Starter and Holly Hall Center positions, or something else? |
-| 4 | Confirm the proposed critical position set, and whether criticality differs between Unload and Bump and Run. |
+| ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. One open detail: Reed Road is two gates in one group and now carries a single critical Computer and Counter, not one per gate. |
 | 5 | A committeeman on two teams: if both teams somehow have shifts on the same date, which shift does his widget show? Proposed default is the earlier start time, with a team switcher. |
 | 6 | Should officers be able to see, and assign within, the shift immediately following their own — you noted officers sometimes stay on. Proposed default is read-only visibility of the next shift on the same team. |
 | 7 | Retention: how many seasons of history should stay live before archival? |
