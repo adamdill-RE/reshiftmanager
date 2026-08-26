@@ -25,15 +25,6 @@ function boardFor(Database $db): Board
     return new Board($db);
 }
 
-/** The shift row assign() needs: id, team and season. */
-function shiftRow(Database $db, int $shiftId): array
-{
-    return (array) $db->one(
-        'SELECT id, team_id, season_id, starts_at, ends_at, current_phase FROM shift WHERE id = :id',
-        ['id' => $shiftId]
-    );
-}
-
 /** Everyone on the day shift is on the tarmac. */
 function checkInAll(Database $db, array $f): void
 {
@@ -53,16 +44,6 @@ function positionId(Database $db, string $label): int
     }
 
     return $id;
-}
-
-function holdsPosition(Database $db, int $shift, string $phase, int $user, string $label): bool
-{
-    return (int) $db->value(
-        'SELECT COUNT(*) FROM assignment a JOIN position p ON p.id = a.position_id
-          WHERE a.shift_id = :s AND a.phase = :ph AND a.user_id = :u
-            AND p.label = :l AND a.is_current = 1',
-        ['s' => $shift, 'ph' => $phase, 'u' => $user, 'l' => $label]
-    ) > 0;
 }
 
 // ---------------------------------------------------------------------------

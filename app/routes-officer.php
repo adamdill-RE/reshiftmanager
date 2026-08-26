@@ -270,9 +270,210 @@ $router->post('officer/skills/{id}', static function (App $app, Request $request
     return Response::redirect(officerUrl($app, $ctx, 'officer/roster', 'saved=1'));
 });
 
+
+// ---------------------------------------------------------------------------
+// View Unload / View Bump and Run (spec 6.9.7), Copy From Previous Shift
+// (6.9.6) and Broadcast Message (6.9.10)
+// ---------------------------------------------------------------------------
+
+$router->get('officer/board/{phase}', static function (App $app, Request $request, array $params): Response {
+    $ctx = officerContext($app, $request, Capability::ViewTeamRoster);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+
+    $phase = (string) ($params['phase'] ?? '');
+    if (!PhaseControl::isPhase($phase)) {
+        return Response::html(officerEmpty($app, 'Not found', 'That is not a phase.'), 404);
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to show a board for.', 422);
+    }
+
+    $ctx = officerWithPhase($app, $ctx, $phase);
+    $groups = officerBoard($app)->groups((int) $ctx['shift']['id'], $phase);
+
+    return Response::html((new View($app))->render('officer/board', $ctx + [
+        'title' => 'View ' . PhaseControl::label($phase),
+        'groups' => $groups,
+        'error' => null,
+        'notice' => null,
+        'back' => officerBack($app, $ctx),
+    ]));
+});
+
+$router->get('officer/copy', static function (App $app, Request $request): Response {
+    $ctx = officerContext($app, $request, Capability::CopyAssignments);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to copy a board onto.', 422);
+    }
+
+    return Response::html(copyPage($app, $ctx, $request));
+});
+
+$router->post('officer/copy', static function (App $app, Request $request): Response {
+    $ctx = officerContext($app, $request, Capability::CopyAssignments);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to copy a board onto.', 422);
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(copyPage($app, $ctx, $request, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $phase = (string) $request->input('phase', (string) $ctx['phase']);
+    $from = officerIntInput($request, 'from_shift') ?? 0;
+
+    // Two posts, not one: the first shows the preview 6.9.6 asks for, and only
+    // a post carrying the confirmation writes anything.
+    if ($request->input('confirm') === null) {
+        return Response::html(copyPage($app, $ctx, $request));
+    }
+
+    $result = officerCopyPrevious($app)->apply($ctx['user'], $ctx['shift'], $from, $phase);
+
+    if (!$result['ok']) {
+        return Response::html(copyPage($app, $ctx, $request, error: $result['error']), 422);
+    }
+
+    return Response::redirect(officerUrl(
+        $app,
+        $ctx,
+        'officer/assign/' . $phase,
+        'copied=' . $result['applied'],
+    ));
+});
+
+$router->get('officer/broadcast', static function (App $app, Request $request): Response {
+    $ctx = officerContext($app, $request, Capability::SendBroadcast);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to broadcast to.', 422);
+    }
+
+    return Response::html(broadcastPage($app, $ctx, notice: $request->input('sent') !== null
+        ? 'Pinned to every widget on the shift.'
+        : ($request->input('cleared') !== null ? 'Taken down.' : null)));
+});
+
+$router->post('officer/broadcast', static function (App $app, Request $request): Response {
+    $ctx = officerContext($app, $request, Capability::SendBroadcast);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to broadcast to.', 422);
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(broadcastPage($app, $ctx, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $shiftId = (int) $ctx['shift']['id'];
+    $service = officerBroadcasts($app);
+
+    if ((string) $request->input('action', '') === 'retire') {
+        $service->retire($ctx['user'], $shiftId);
+
+        return Response::redirect(officerUrl($app, $ctx, 'officer/broadcast', 'cleared=1'));
+    }
+
+    $result = $service->send(
+        $ctx['user'],
+        $shiftId,
+        (string) $request->input('body', ''),
+        (string) $request->input('expires_in', ''),
+    );
+
+    if (!$result['ok']) {
+        return Response::html(broadcastPage($app, $ctx, error: $result['error']), 422);
+    }
+
+    return Response::redirect(officerUrl($app, $ctx, 'officer/broadcast', 'sent=1'));
+});
+
 // ---------------------------------------------------------------------------
 // Shared scaffolding
 // ---------------------------------------------------------------------------
+
+function officerCopyPrevious(App $app): Resm\Officer\CopyPrevious
+{
+    return new Resm\Officer\CopyPrevious($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function officerBroadcasts(App $app): Resm\Officer\Broadcasts
+{
+    return new Resm\Officer\Broadcasts($app->db(), new Resm\AuditLog($app->db()));
+}
+
+/**
+ * Copy From Previous Shift, with the preview 6.9.6 requires.
+ *
+ * @param array<string, mixed> $ctx
+ */
+function copyPage(App $app, array $ctx, Request $request, ?string $error = null): string
+{
+    $phase = (string) $request->input('phase', (string) $ctx['phase']);
+    if (!PhaseControl::isPhase($phase)) {
+        $phase = (string) $ctx['phase'];
+    }
+
+    $ctx = officerWithPhase($app, $ctx, $phase);
+    $shiftId = (int) $ctx['shift']['id'];
+    $teamId = (int) $ctx['team']['id'];
+    $seasonId = (int) $ctx['season']['id'];
+
+    $service = officerCopyPrevious($app);
+    $sources = $service->sources($teamId, $seasonId, $shiftId, $phase, $app->now());
+
+    $from = officerIntInput($request, 'from_shift');
+    $preview = null;
+    $source = null;
+
+    if ($from !== null) {
+        foreach ($sources as $candidate) {
+            if ((int) $candidate['id'] === $from) {
+                $source = $candidate;
+                break;
+            }
+        }
+        if ($source !== null) {
+            $preview = $service->preview($from, $shiftId, $teamId, $seasonId, $phase);
+        }
+    }
+
+    return (new View($app))->render('officer/copy', $ctx + [
+        'title' => 'Copy From Previous Shift',
+        'sources' => $sources,
+        'source' => $source,
+        'preview' => $preview,
+        'copyPhase' => $phase,
+        'error' => $error,
+        'notice' => null,
+        'back' => officerBack($app, $ctx),
+    ]);
+}
+
+/** @param array<string, mixed> $ctx */
+function broadcastPage(App $app, array $ctx, ?string $error = null, ?string $notice = null): string
+{
+    $shiftId = (int) $ctx['shift']['id'];
+
+    return (new View($app))->render('officer/broadcast', $ctx + [
+        'title' => 'Broadcast Message',
+        'live' => attendance($app)->broadcast($shiftId),
+        'history' => officerBroadcasts($app)->history($shiftId),
+        'error' => $error,
+        'notice' => $notice,
+        'back' => officerBack($app, $ctx),
+    ]);
+}
 
 function officerPeople(App $app): Resm\Officer\People
 {

@@ -1077,3 +1077,25 @@ details[open] > .disclosure::before {
 .disclosure-block[open] > .disclosure {
     margin-bottom: 0.75rem;
 }
+
+/* The read-only boards (spec 6.9.7): position left, whoever is there right.
+   Scrolls inside itself so a long position name never widens the page. */
+.board {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.board th {
+    width: 55%;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.board td {
+    overflow-wrap: anywhere;
+}
+
+textarea.field__input {
+    font-family: inherit;
+    resize: vertical;
+}
