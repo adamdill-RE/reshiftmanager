@@ -642,6 +642,14 @@ details[open] > .disclosure::before {
     font-weight: 600;
 }
 
+/* Red when the last ask failed (spec 6.3). Not hue alone: the strip says the
+   word "offline" beside it, because a colour is the one cue that is gone in
+   bright sun through a scratched screen protector. */
+.widget__fresh--offline {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 .widget__note {
     margin: 0.5rem 0 0;
     color: var(--warn);

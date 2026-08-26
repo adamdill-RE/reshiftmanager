@@ -293,6 +293,78 @@ $router->post('my-shift', static function (App $app, Request $request): Response
     return Response::redirect($app->url('my-shift?shift=' . (int) $shift['id'] . '&done=1'));
 });
 
+// ---------------------------------------------------------------------------
+// The polling endpoint (spec 10.2)
+//
+// LVE caps concurrent entry processes per account, so held-open connections
+// are out and clients short-poll instead (docs/hosting.md). Everything about
+// this route is shaped by the fact that almost every call to it is answered
+// "nothing has changed": that path is one indexed lookup, no session write, no
+// body, and a 304.
+//
+// It answers JSON rather than redirecting an unauthenticated poller to the
+// login screen — a background fetch cannot use a login page, and a poller that
+// followed one would silently start reporting the login screen as shift state.
+// ---------------------------------------------------------------------------
+
+$router->get('api/state', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return pollResponse(Response::json(['error' => 'signed-out'], 401));
+    }
+
+    $shiftId = (int) $request->input('shift', '0');
+    if ($shiftId <= 0) {
+        return pollResponse(Response::json(['error' => 'no-shift'], 400));
+    }
+
+    $poll = pollState($app);
+    $version = $poll->version($user, $shiftId);
+
+    // A shift that does not exist and a shift this user may not see answer
+    // identically. Distinguishing them would make this endpoint a way to
+    // enumerate other teams' shifts by id.
+    if ($version === null) {
+        return pollResponse(Response::json(['error' => 'no-shift'], 404));
+    }
+
+    // The session is not needed past this point, and holding it open serialises
+    // every other request from the same phone behind the poll — PHP's session
+    // lock is per-session, so a poll every ten seconds would otherwise be ten
+    // seconds of contention against the screen the user is actually tapping.
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
+    $known = $request->input('v');
+    if ($known !== null && $known !== '' && (int) $known === $version) {
+        return pollResponse(Response::notModified());
+    }
+
+    // Only reached when something actually moved, so this is allowed to cost
+    // something. The strip is rendered by the same view the page rendered it
+    // with (spec 6.3) rather than rebuilt in JavaScript, because two renderers
+    // drift and the one that drifts is the one claiming to be live.
+    $widget = Resm\Shift\Widget::forShift($app, $shiftId);
+    $closesAt = $poll->closesAt($shiftId);
+
+    return pollResponse(Response::json([
+        'shift' => $shiftId,
+        'version' => $version,
+        'served_at' => $app->now()->format('c'),
+        'closes_at' => $closesAt?->format('c'),
+        // Null for anyone the strip does not apply to — an officer running a
+        // team's board who is not checked into it himself. The version still
+        // moved, which is what his board is listening for.
+        'phase' => $widget === null ? null : (string) $widget['shift']['current_phase'],
+        'checked_in' => $widget === null ? null : (bool) $widget['shift']['checked_in'],
+        'lunch' => $widget === null ? null : (string) $widget['shift']['lunch'],
+        'widget' => $widget === null
+            ? null
+            : (new View($app))->render('widget', $widget, layout: null),
+    ]));
+});
+
 $router->get('my-shifts', static function (App $app, Request $request): Response {
     $user = $app->user();
     if ($user === null) {
@@ -1213,6 +1285,31 @@ function currentShift(App $app): CurrentShift
 function attendance(App $app): Attendance
 {
     return new Attendance($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function pollState(App $app): Resm\Poll\State
+{
+    return new Resm\Poll\State(
+        $app->db(),
+        new Resm\Shift\Window($app->displayTimezone()),
+    );
+}
+
+/**
+ * Headers every polling answer carries.
+ *
+ * no-store rather than no-cache: the whole point of the endpoint is that the
+ * client holds the version and asks whether it moved, so an intermediary
+ * holding its own copy could only ever answer with a staler one. LiteSpeed
+ * with LSCache in front of this would otherwise be free to serve a cached
+ * "nothing changed" to a phone whose board has changed — the one failure the
+ * freshness indicator in spec 6.3 exists to make impossible.
+ */
+function pollResponse(Response $response): Response
+{
+    return $response
+        ->withHeader('Cache-Control', 'no-store, must-revalidate')
+        ->withHeader('X-Robots-Tag', 'noindex');
 }
 
 function checkInPage(
