@@ -1482,6 +1482,13 @@ function setupSetPin(App $app, Request $request): Response
     );
 }
 
+/*
+ * The Officer Menu, spec 6.9. A separate file because it is eleven screens and
+ * this table was already long; the same two rules hold there — every handler
+ * resolves its own user and re-checks team scope, and every POST checks CSRF.
+ */
+require __DIR__ . '/routes-officer.php';
+
 function notFoundResponse(App $app): Response
 {
     return Response::html(

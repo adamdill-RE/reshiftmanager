@@ -13,16 +13,6 @@ use Resm\Shift\Window;
  * 08:00–18:00 against Team C running 16:45–02:00 leaves 75 minutes where both
  * are live, and the rule has to pick one without hiding the other.
  */
-function chicago(): DateTimeZone
-{
-    return new DateTimeZone('America/Chicago');
-}
-
-function utc(string $localTime): DateTimeImmutable
-{
-    return (new DateTimeImmutable($localTime, chicago()))->setTimezone(new DateTimeZone('UTC'));
-}
-
 function currentShiftFor(Database $db): CurrentShift
 {
     return new CurrentShift($db, chicago());
@@ -87,13 +77,6 @@ function dualFixture(Database $db, string $tag): array
     ];
 }
 
-function checkEvent(Database $db, int $shift, int $user, string $type, string $localTime): void
-{
-    $db->execute(
-        'INSERT INTO check_event (shift_id, user_id, type, occurred_at) VALUES (:s, :u, :t, :o)',
-        ['s' => $shift, 'u' => $user, 't' => $type, 'o' => utc($localTime)->format('Y-m-d H:i:s')]
-    );
-}
 
 // ---------------------------------------------------------------------------
 // The window (spec 5.3)

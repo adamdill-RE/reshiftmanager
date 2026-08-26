@@ -675,3 +675,110 @@ details[open] > .disclosure::before {
     font-weight: 700;
     line-height: 1.15;
 }
+
+/* ---------------------------------------------------------------------------
+   Officer Menu (spec 6.9)
+   --------------------------------------------------------------------------- */
+
+/* Team and shift selectors. Side by side where there is room, stacked on a
+   narrow phone, and the Show button is hidden by picker.js once the change
+   handler is attached. */
+.picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--touch-gap);
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.picker .field {
+    flex: 1 1 10rem;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+/* The phase toggle, spec 6.9.1. The active half is filled Rodeo Orange with
+   Ink on top — never white, which at 2.9:1 would fail contrast outright
+   (spec 9.1). */
+.phase {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.phase__option {
+    flex: 1 1 50%;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    border: 0;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+.phase__option--on {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+/* The coverage counter, spec 6.9.2. Five figures, each one a tap target that
+   filters the list behind it. */
+.coverage {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--border);
+    overflow: hidden;
+}
+
+.coverage__item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: var(--touch-min);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.5rem 0.15rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.coverage__figure {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.coverage__label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* Critical short is red on purpose and is not an error state: Bump and Run has
+   37 critical positions against a shift that can run 25 people, so on a short
+   night this is the board telling the truth (spec 5.4, 8.1). */
+.coverage__item--short {
+    background: var(--danger-surface);
+}
+
+.coverage__item--short .coverage__figure {
+    color: var(--danger);
+}

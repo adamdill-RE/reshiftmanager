@@ -63,3 +63,30 @@ function inRollback(callable $work): void
     }
 }
 
+
+/**
+ * The display timezone, and a local time expressed as the UTC instant the
+ * database stores.
+ *
+ * Here rather than in one suite because three files need them, and a helper
+ * that lives in a test file makes `php tests/run.php <filter>` fail on every
+ * other file that uses it.
+ */
+function chicago(): DateTimeZone
+{
+    return new DateTimeZone('America/Chicago');
+}
+
+function utc(string $localTime): DateTimeImmutable
+{
+    return (new DateTimeImmutable($localTime, chicago()))->setTimezone(new DateTimeZone('UTC'));
+}
+
+/** Record a check in or out at a local time, the way the tarmac does. */
+function checkEvent(Database $db, int $shift, int $user, string $type, string $localTime): void
+{
+    $db->execute(
+        'INSERT INTO check_event (shift_id, user_id, type, occurred_at) VALUES (:s, :u, :t, :o)',
+        ['s' => $shift, 'u' => $user, 't' => $type, 'o' => utc($localTime)->format('Y-m-d H:i:s')]
+    );
+}

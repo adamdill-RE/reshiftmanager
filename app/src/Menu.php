@@ -41,10 +41,9 @@ final class Menu
             'icon' => 'clipboard',
             'sub' => 'Assign, phase control, roster',
             'role' => Role::Officer,
-            'built' => false,
-            'summary' => 'The operational core: the two assign boards, the phase toggle, the '
-                . 'coverage counter, copy from a previous shift, lunch management and broadcasts.',
-            'phase' => 'Phase 4 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'check-in' => [
             'label' => 'Check In / Out',
