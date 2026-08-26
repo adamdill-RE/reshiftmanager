@@ -110,6 +110,21 @@ $router->post('logout', static function (App $app, Request $request): Response {
 });
 
 // ---------------------------------------------------------------------------
+// The PWA shell (spec 10.1)
+//
+// The manifest is built by Resm\Pwa\Manifest rather than shipped as a file;
+// the reason is documented there.
+// ---------------------------------------------------------------------------
+
+$router->get('manifest.webmanifest', static function (App $app, Request $request): Response {
+    return Response::json(Resm\Pwa\Manifest::document($app))
+        ->withHeader('Content-Type', 'application/manifest+json; charset=utf-8')
+        // Long enough that it is not re-fetched on every launch, short enough
+        // that a corrected icon reaches an installed phone the same day.
+        ->withHeader('Cache-Control', 'public, max-age=3600');
+});
+
+// ---------------------------------------------------------------------------
 // Tools (spec 6.7)
 // ---------------------------------------------------------------------------
 
@@ -1441,6 +1456,7 @@ function toolsPage(App $app, Resm\Auth\Identity $user, ?string $error = null, ?s
         'user' => $user,
         'error' => $error,
         'notice' => $notice,
+        'scripts' => ['js/install.js'],
         'back' => ['url' => $app->url(), 'label' => 'Menu'],
     ]);
 }

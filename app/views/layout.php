@@ -42,6 +42,25 @@ $poll = Resm\Poll\State::forPage(
     <link rel="stylesheet" href="<?= e($app->asset('css/app.css')) ?>">
 
     <?php
+    // Installable to the home screen (spec 10.1). The manifest is a route
+    // rather than a file because every path inside it is absolute and nothing
+    // may hard-code the mount point (CLAUDE.md).
+    ?>
+    <link rel="manifest" href="<?= e($app->url('manifest.webmanifest')) ?>">
+
+    <?php
+    // iOS does not read the manifest for the home-screen icon; this is the one
+    // it uses. Naming the favicon explicitly matters for a different reason:
+    // without it the browser probes the DOCUMENT ROOT for /favicon.ico, which
+    // is not ours to answer — the app is mounted at /resm/ and the root belongs
+    // to the domain.
+    ?>
+    <link rel="apple-touch-icon" href="<?= e($app->asset('icons/apple-touch-icon.png')) ?>">
+    <link rel="icon" type="image/png" href="<?= e($app->asset('icons/favicon.png')) ?>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Rodeo Shifts">
+
+    <?php
     // Ahead of the stylesheet's paint rather than deferred with everything
     // else: a pinned dark theme applied after first paint is a white flash in
     // the face of someone standing on a dark tarmac at 02:00 (spec 9.2).

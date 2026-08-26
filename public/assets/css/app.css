@@ -124,6 +124,18 @@ html {
     box-sizing: border-box;
 }
 
+/* The hidden attribute has to actually hide.
+   [hidden] is display:none in the UA stylesheet, which any author rule setting
+   display beats on specificity — so .keypad{display:grid} and
+   .install__state{display:flex} both rendered while still marked hidden. That
+   is not a cosmetic slip: it put a dead keypad on the login screen for anyone
+   without JavaScript, and told a man in a browser tab that he was running the
+   installed app. !important because the whole point is to outrank whatever a
+   component sets. */
+[hidden] {
+    display: none !important;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -1106,4 +1118,36 @@ details[open] > .disclosure::before {
 textarea.field__input {
     font-family: inherit;
     resize: vertical;
+}
+
+/* ---------------------------------------------------------------------------
+   Install instructions (spec 6.7)
+   --------------------------------------------------------------------------- */
+
+.install__state {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+}
+
+.install__how h3 {
+    margin: 0 0 0.5rem;
+}
+
+/* Numbered because they are steps in order, and read one at a time by someone
+   holding a phone in the other hand — hence the line height and the room
+   between them rather than a tight list. */
+.install__steps {
+    margin: 0;
+    padding-left: 1.4rem;
+}
+
+.install__steps li {
+    margin-bottom: 0.6rem;
+    line-height: 1.6;
+}
+
+.install__steps li:last-child {
+    margin-bottom: 0;
 }
