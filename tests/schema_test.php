@@ -116,9 +116,14 @@ test('the five shared groups carry forward and the others do not', function (): 
     );
 });
 
-test('the eight certifications are seeded', function (): void {
-    assertSame(8, (int) testDb()->value('SELECT COUNT(*) FROM skill'));
-    assertSame('radio', (string) testDb()->value('SELECT code FROM skill ORDER BY sort_order LIMIT 1'));
+test('ten skills are seeded, in two kinds', function (): void {
+    // Eight from migration 002, plus Crosswalk Perimeter and Gate from 005.
+    // The mapping and the chip order are asserted in position_matrix_test.php,
+    // against the rule in spec 7.2.
+    $db = testDb();
+    assertSame(10, (int) $db->value('SELECT COUNT(*) FROM skill'));
+    assertSame(8, (int) $db->value("SELECT COUNT(*) FROM skill WHERE kind = 'position'"));
+    assertSame(2, (int) $db->value("SELECT COUNT(*) FROM skill WHERE kind = 'equipment'"));
 });
 
 // ---------------------------------------------------------------------------

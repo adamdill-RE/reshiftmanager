@@ -48,6 +48,10 @@ Version 2.0  ·  August 2026
   - [6.9 Officer Menu](#69-officer-menu)
   - [6.10 Admin Menu](#610-admin-menu)
 - [7. Skills & Certifications](#7-skills--certifications)
+  - [7.1 Two kinds](#71-two-kinds)
+  - [7.2 How positions map to skills](#72-how-positions-map-to-skills)
+  - [7.3 Certified and preferred](#73-certified-and-preferred)
+  - [7.4 Skills never gate an assignment](#74-skills-never-gate-an-assignment)
 - [8. Position Matrix](#8-position-matrix)
   - [8.1 Group summary](#81-group-summary)
   - [8.2 Attribute definitions](#82-attribute-definitions)
@@ -315,6 +319,8 @@ A chronological list of every shift assigned to the user in the active season: d
 
 ### 6.7 Tools
 
+Change PIN, sign out, and **Preferred Skills** — the committeeman ticks the jobs he would rather be given, and officers see it beside his name on the assign board (7.3). It is a preference, never a claim to be certified and never a restriction on where he can be put (7.4).
+
 - Change my PIN — current PIN, new PIN, confirm.
 - Toggle Large Text mode.
 - Toggle Dark / Light / Auto theme.
@@ -380,8 +386,8 @@ Rules enforced by the server on every write:
 
 Officer aids on both screens:
 
-- Skill filter — a chip row (Radio, Starter, Computer, Counter, Runner, Crosswalk Middle, Forklift, Golf Cart) narrowing the available list. Filters are optional and advisory.
-- Skill mismatch produces a soft warning ("Not radio certified — assign anyway?"), never a block.
+- Skill filter — a chip row of the eight position skills (Radio, Starter, Computer, Counter, Runner, Crosswalk Middle, Crosswalk Perimeter, Gate) narrowing the available list. Filters are optional and advisory. Forklift and Golf Cart are deliberately not here (7.1).
+- Each available committeeman shows the skills he is certified in and the ones he prefers (7.3). Nothing warns and nothing blocks: who stands where is decided on the ground (7.4).
 - Search by last name.
 - Collapsible group sections so a 95-position board stays navigable on a phone.
 - Vacant critical positions are pinned to the top of the board and outlined in red.
@@ -488,20 +494,60 @@ Filterable, read-only view of every assignment change, phase flip, check event, 
 
 ## 7. Skills & Certifications
 
-Eight certifications, persistent from shift to shift and season to season once set. Editable by Officers and Admins on their own teams.
+**Answered.** Ten of them, persistent from shift to shift and season to season once set, in two kinds that behave differently.
 
-| Skill | Suggested position mapping | Status |
+### 7.1 Two kinds
+
+**Position skills** name a job on the tarmac. They answer "who can do this?", so they appear on the assign board.
+
+**Equipment certifications** — Forklift and Golf Cart — correspond to no position and never will. They answer "what else can this man do?", which is a roster question rather than an assignment one. They appear on View Roster and in the export, and they are deliberately absent from the assign board's chip row: a filter that cannot change the outcome is one officers learn to look past, and it costs the other chips their credibility.
+
+| Skill | Kind | Positions |
 | --- | --- | --- |
-| Radio | Every position flagged is_radio (22 positions) | Mapped |
-| Starter | All positions containing "Starter" | Mapped |
-| Computer | All positions containing "Computer" | Mapped |
-| Counter | All positions containing "Counter" | Mapped |
-| Runner | All positions containing "Runner" | Mapped |
-| Crosswalk Middle | Naomi Center Starter, Holly Hall Center | Needs confirmation |
-| Forklift | No position in the current matrix requires it | Needs confirmation |
-| Golf Cart | No position in the current matrix requires it | Needs confirmation |
+| Radio | Position | 22, via `position.is_radio` |
+| Starter | Position | 14 |
+| Computer | Position | 8 |
+| Counter | Position | 14 |
+| Runner | Position | 19 |
+| Crosswalk Middle | Position | 2 |
+| Crosswalk Perimeter | Position | 11 |
+| Gate | Position | 12 |
+| Forklift | Equipment | none |
+| Golf Cart | Equipment | none |
 
-**Open question:**  Forklift and Golf Cart are tracked as certifications but no position in the matrix corresponds to either. Are there forklift or cart positions missing from the list, or are these certifications tracked purely for reference and reporting?
+### 7.2 How positions map to skills
+
+Each position calls for at most one job skill, held in `position.skill_id`. Radio stays a separate flag because it is orthogonal: Reed Starter 1 wants a Starter **and** a radio.
+
+The mapping is a rule rather than 98 separate decisions, and it is generated from that rule rather than transcribed:
+
+1. In the two crosswalk groups: a position containing "Center" is **Crosswalk Middle**; one containing "Bridge" gets **no skill**; everything else is **Crosswalk Perimeter**.
+2. Otherwise a label containing "Gate" is **Gate** — every gate, the Main Committee Gate and all ten Back Gates alike.
+3. Otherwise "Computer", "Counter", "Runner" or "Starter" in the label names that skill.
+4. Anything else has no skill.
+
+The order matters. Naomi's centre position is called *Center Starter*, so a rule that checked for "Starter" first would file the crosswalk centre under Starter and nobody would notice.
+
+**80 of 98 positions map; 18 do not** — the six Tent Entrance/Overheads, both Bus Callers, both Curves, the six Naomi Bridge positions, GB/LT Back of Tent and the Unload Helper. Those are their own jobs with nothing shared to certify. Bridge work is its own thing, not perimeter work.
+
+### 7.3 Certified and preferred
+
+Two independent facts about the same person and skill:
+
+| | Set by | Means |
+| --- | --- | --- |
+| **Certified** | An officer or admin, on their own teams | He *can* do this |
+| **Preferred** | The committeeman himself, under Tools | He *would rather* do this |
+
+They are independent on purpose. A man can be certified in something he would rather not do, and prefer something he is not yet certified for — which is the more useful of the two, because it is a training list nobody had to compile.
+
+### 7.4 Skills never gate an assignment
+
+**Nothing here restricts what an officer may do.** Certification is not a permission and preference is not a claim: both are information shown beside a name so the officer can decide, and who stands where is decided on the ground with the people who actually turned up.
+
+So the board does not block, and it does not warn either. An "assign anyway?" confirmation is friction on the one screen where an officer is placing sixty people in fifteen minutes, and friction there is how a tool starts being worked around. The chip row filters the available list, which is optional and advisory, and each man's skills are shown against his name. That is the whole of it.
+
+*Changed from the earlier draft, which specified a soft warning on a skill mismatch.*
 
 ## 8. Position Matrix
 
@@ -762,7 +808,7 @@ Two officers will assign at the same time. The server is the sole authority.
 | Rodeo Information | Content structure and copy for the menu. |
 | ~~Critical position review~~ | **Received.** 39 critical positions, Section 8.3. Criticality does not differ between phases. |
 | ~~Default active groups~~ | **Received.** All ten groups, every shift type; see Section 5.4. |
-| Skill mapping confirmation | Crosswalk Middle mapping, and whether forklift and golf cart correspond to any positions. |
+| ~~Skill mapping confirmation~~ | **Received.** Ten skills in two kinds, and the position mapping rule; Section 7. |
 
 ### 11.4 Tarmac map — what to supply
 
@@ -780,11 +826,11 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | # | Question |
 | --- | --- |
 | ~~1~~ | **Answered.** All ten groups, on every shift type — the phase matrix already does the per-phase filtering and the four route stops always run. See Section 5.4, which also re-scopes the count this question was asked in service of. |
-| 2 | Do forklift and golf cart certifications correspond to any tarmac positions, or are they reference-only? |
-| 3 | Does "Crosswalk Middle" mean the Naomi Center Starter and Holly Hall Center positions, or something else? |
+| ~~2~~ | **Answered.** Reference-only. They correspond to no position and are roster information, so they are shown on View Roster and in the export and left off the assign board's chip row (7.1). |
+| ~~3~~ | **Answered.** Yes, those two. Crosswalk Perimeter was added alongside it for the perimeter positions, and Gate for every position with "Gate" in its name. Naomi Bridge is its own thing and maps to no skill (7.2). |
 | ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. Reed Road carries a single critical Computer and Counter for the group rather than one per gate: Reed and Employee can run from one gate when short, which is a management change on the ground rather than a second critical pair. |
 | ~~5~~ | **Answered.** It happens, and the resolution rule is in Section 5.5. Current shift is the one he is checked into and has not left, ended shifts excluded; ties go to the earlier start and are shown as a double. Check-out is what moves him on, not the clock, and it vacates his old position in the same moment. The officer taking him on is warned (6.9.4 rule 7). |
-| 6 | Should officers be able to see, and assign within, the shift immediately following their own — you noted officers sometimes stay on. Proposed default is read-only visibility of the next shift on the same team. |
+| ~~6~~ | **Answered — no.** "Whatever keeps the UI clean", and the assign board is already the densest screen in the application. The 5.3 window opens the next shift at midnight anyway, and an officer who stays on simply becomes current on it, so a second shift's data on that screen buys little for what it costs. |
 | 7 | Retention: how many seasons of history should stay live before archival? |
 | 8 | Is there a Rodeo Express or committee logo to use in place of the wordmark on the login screen? |
 
