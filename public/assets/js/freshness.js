@@ -23,6 +23,11 @@
         return;
     }
 
+    // The unmissable half of the indicator (spec 6.5, 10.3). The strip's
+    // "updated 4m ago" is for someone reading it; this is for someone
+    // glancing at a phone held in a gloved hand.
+    var banner = document.querySelector('[data-stale]');
+
     var poll = window.Resm.poll;
 
     // Amber past a minute, red when the last ask failed (spec 6.3).
@@ -63,6 +68,11 @@
         // on updating a node that is no longer in the document — a strip
         // frozen at the moment it last changed, which is the exact lie 6.3
         // exists to prevent.
+        // The banner first, and outside the strip. A user who has not checked
+        // in yet has no strip at all (spec 6.3), and he is no less entitled to
+        // know that what he is looking at is a saved copy.
+        banners();
+
         var el = strip.querySelector('.widget__fresh');
         if (!el) {
             return;
@@ -73,6 +83,20 @@
         el.textContent = label(seconds);
         el.classList.toggle('widget__fresh--stale', !offline && seconds >= STALE_SECONDS);
         el.classList.toggle('widget__fresh--offline', offline);
+    }
+
+    function banners() {
+        if (!banner) {
+            return;
+        }
+
+        banner.hidden = !offline;
+
+        // The banner is fixed to the bottom of the viewport, where spec 9.3
+        // also puts the primary action. Without this it sits on top of the
+        // button a man is reaching for. The class reserves the room instead of
+        // covering it.
+        document.body.classList.toggle('has-stale', offline);
     }
 
     poll.subscribe(function (event) {

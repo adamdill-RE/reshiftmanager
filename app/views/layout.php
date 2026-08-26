@@ -67,7 +67,18 @@ $poll = Resm\Poll\State::forPage(
     ?>
     <script src="<?= e($app->asset('js/theme.js')) ?>"></script>
 </head>
+<?php
+// The moment the SERVER rendered this page. It is what poll.js ages the
+// freshness strip from, and it has to come from here rather than from the
+// clock when the script runs: a page the service worker served from cache
+// runs its scripts now and was rendered hours ago, and seeding from Date.now()
+// would have it announce itself as fresh. That is precisely the stale screen
+// looking live that spec 6.3 and 10.3 both forbid.
+$renderedAt = $app->now()->format('c');
+?>
 <body data-base="<?= e($app->basePath()) ?>"
+    data-rendered-at="<?= e($renderedAt) ?>"
+    data-shell-version="<?= e(Resm\Pwa\Shell::version($app)) ?>"
     <?php if ($poll !== null): ?>
         data-poll-shift="<?= e($poll['shift']) ?>"
         data-poll-version="<?= e($poll['version']) ?>"
@@ -105,11 +116,28 @@ $poll = Resm\Poll\State::forPage(
 </div>
 
 <?php
+// Spec 6.5 and 10.3: when offline the screen renders the last known state with
+// a clear staleness banner. Shipped hidden and revealed by freshness.js the
+// moment an ask fails — the strip's own indicator is the fine-grained one, and
+// this is the version that cannot be missed by someone glancing at a phone in
+// a glove.
+?>
+<p class="stale" role="alert" data-stale hidden>
+    <span class="badge badge--danger">OFFLINE</span>
+    This is a saved copy. It is not being updated.
+</p>
+
+<?php
 // poll.js is the transport and carries no opinion about any screen; freshness.js
 // is the strip's subscriber. Loading the transport on a page with nothing to
 // poll costs a parse and does nothing, so it is loaded only where there is.
 if ($poll !== null && !in_array('js/poll.js', $scripts, true)) {
     array_unshift($scripts, 'js/poll.js');
+}
+// On every screen, signed in or not: the worker has to be able to install from
+// the login page, which is where a phone is most likely to still have wifi.
+if (!in_array('js/sw-register.js', $scripts, true)) {
+    array_unshift($scripts, 'js/sw-register.js');
 }
 if ($poll !== null && !in_array('js/freshness.js', $scripts, true)) {
     $scripts[] = 'js/freshness.js';

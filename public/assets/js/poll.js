@@ -54,9 +54,24 @@
     var stopped = false;
     var inFlight = false;
 
-    // The last time the server actually answered. Seeded with the page render,
-    // which is a true statement about freshness at that instant.
-    var lastContact = Date.now();
+    // The last time the server actually answered.
+    //
+    // Seeded from the SERVER's render time, not from the clock when this
+    // script runs. They are the same thing on a page fetched from the network
+    // and they are hours apart on one the service worker served from cache —
+    // which runs its scripts now and was rendered whenever it was last online.
+    // Seeding from Date.now() would have a saved copy announce itself as
+    // fresh, which is the one failure spec 6.3 and 10.3 both name.
+    var rendered = Date.parse(body.getAttribute('data-rendered-at') || '');
+    var lastContact = isNaN(rendered) ? Date.now() : rendered;
+
+    // A phone whose clock is wrong would otherwise show a negative or absurd
+    // age. The server's time is the authority for the instant; this device's
+    // is the only clock available for measuring elapsed time from it, and
+    // where they disagree the honest fallback is "now".
+    if (lastContact > Date.now()) {
+        lastContact = Date.now();
+    }
 
     // Consecutive failures. A phone that has walked behind a hangar should not
     // keep firing at the same rate — it drains a battery that has to last
@@ -274,5 +289,22 @@
         emit('offline');
     });
 
-    schedule();
+    /**
+     * A page rendered by the server was, by definition, in contact with it a
+     * moment ago; there is nothing to ask and the first poll can wait for its
+     * interval. A page the service worker served from cache was rendered
+     * whenever it was last online, and is stale the instant it appears.
+     *
+     * So: ask straight away only in the second case. It costs nothing on a
+     * normal navigation, and it is the difference between a saved copy
+     * announcing itself immediately and doing so ten seconds later, by which
+     * time somebody has already read it and walked off.
+     */
+    var FRESH_ON_LOAD_SECONDS = 5;
+
+    if (Date.now() - lastContact > FRESH_ON_LOAD_SECONDS * 1000) {
+        ask();
+    } else {
+        schedule();
+    }
 }());

@@ -116,6 +116,22 @@ $router->post('logout', static function (App $app, Request $request): Response {
 // the reason is documented there.
 // ---------------------------------------------------------------------------
 
+/*
+ * What the service worker caches, and under what version. Unauthenticated on
+ * purpose: it lists only asset URLs that are public anyway, and the worker has
+ * to be able to install from the login screen — before anybody has signed in
+ * is exactly when a phone is most likely to be on wifi in a car park rather
+ * than on a tarmac with no signal.
+ */
+$router->get('sw-manifest.json', static function (App $app, Request $request): Response {
+    return Response::json(Resm\Pwa\Shell::document($app))
+        // The worker fetches this with cache: 'no-store' as well. Both, because
+        // a cached manifest would install a new worker against the old asset
+        // list — the precise stale-shell-after-deploy failure the version
+        // exists to prevent.
+        ->withHeader('Cache-Control', 'no-store');
+});
+
 $router->get('manifest.webmanifest', static function (App $app, Request $request): Response {
     return Response::json(Resm\Pwa\Manifest::document($app))
         ->withHeader('Content-Type', 'application/manifest+json; charset=utf-8')

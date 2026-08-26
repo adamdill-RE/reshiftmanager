@@ -1189,3 +1189,35 @@ textarea.field__input {
     background: var(--accent);
     color: var(--accent-text);
 }
+
+/* ---------------------------------------------------------------------------
+   The staleness banner (spec 6.5, 10.3)
+   --------------------------------------------------------------------------- */
+
+/* Pinned to the bottom, where a thumb already is and where it cannot be
+   scrolled past unnoticed. "A stale view must never be mistakable for a live
+   one", and the strip's own counter is the version for someone who is reading
+   rather than glancing. */
+/* Room for it, so a banner pinned over the thumb-reach zone does not sit on
+   top of the primary action that spec 9.3 puts there. Set by freshness.js at
+   the same moment the banner appears. */
+.has-stale .page {
+    padding-bottom: 6rem;
+}
+
+.stale {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--danger-surface);
+    color: var(--text);
+    border-top: 3px solid var(--danger);
+    font-weight: 600;
+}
