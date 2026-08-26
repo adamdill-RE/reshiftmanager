@@ -47,7 +47,15 @@
      */
     document.addEventListener('submit', function (event) {
         var form = event.target;
-        if (!form || !form.action || form.action.indexOf(base + 'logout') === -1) {
+        if (!form || typeof form.getAttribute !== 'function') {
+            return;
+        }
+
+        // getAttribute, not form.action: a form's named controls shadow its
+        // properties, and My Shift Status posts an <input name="action"> — so
+        // form.action there is the input element, not the URL.
+        var action = form.getAttribute('action') || '';
+        if (action.indexOf(base + 'logout') === -1) {
             return;
         }
 

@@ -108,6 +108,15 @@ $renderedAt = $app->now()->format('c');
         ?>
     </div>
 
+    <?php
+    // Spec 6.4: a visible "1 pending" badge until a queued tap syncs. It sits
+    // OUTSIDE the strip container above deliberately — the polling layer
+    // replaces that container's markup wholesale whenever the shift moves, and
+    // a badge inside it would be detached from the script holding it the first
+    // time anything happened.
+    ?>
+    <p class="pending" role="status" data-pending hidden></p>
+
     <?php if ($back !== null): ?>
         <p><a class="button button--quiet" href="<?= e($back['url']) ?>">&larr; <?= e($back['label']) ?></a></p>
     <?php endif; ?>
@@ -141,6 +150,12 @@ if (!in_array('js/sw-register.js', $scripts, true)) {
 }
 if ($poll !== null && !in_array('js/freshness.js', $scripts, true)) {
     $scripts[] = 'js/freshness.js';
+}
+// Everywhere, not only on the two screens with a queueable form: a tap saved
+// on the tarmac has to keep showing as pending while its owner walks around
+// the rest of the app, and it has to drain from wherever he happens to be.
+if ($poll !== null && !in_array('js/offline.js', $scripts, true)) {
+    $scripts[] = 'js/offline.js';
 }
 ?>
 <?php foreach ($scripts as $script): ?>

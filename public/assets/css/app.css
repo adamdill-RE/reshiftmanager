@@ -1221,3 +1221,35 @@ textarea.field__input {
     border-top: 3px solid var(--danger);
     font-weight: 600;
 }
+
+/* ---------------------------------------------------------------------------
+   The offline queue (spec 6.4, 10.3)
+   --------------------------------------------------------------------------- */
+
+/* "1 pending" until it syncs. Amber rather than red: nothing is wrong, the tap
+   was recorded and is waiting for signal. Red is reserved for the screen being
+   stale, which is the thing that can mislead. */
+.pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0.4rem 0.7rem;
+    border: 2px solid var(--warn);
+    border-radius: var(--radius);
+    background: var(--warn-surface);
+    color: var(--warn);
+    font-weight: 700;
+}
+
+/* What the form says back when a tap could not reach the server. It names the
+   time it was saved, because the whole promise of the queue is that the
+   ORIGINAL moment is what gets recorded. */
+.offline-note {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border-left: 4px solid var(--warn);
+    background: var(--warn-surface);
+    color: var(--text);
+    font-weight: 600;
+}

@@ -51,7 +51,12 @@ $url = $app->url('check-in');
     <?php endif; ?>
 </p>
 
-<form method="post" action="<?= e($url) ?>">
+<?php
+// data-offline is what offline.js diverts on, and it is an opt-IN: only the
+// three writes spec 10.3 names may be recorded late. An officer's assignment
+// carries no such attribute and so cannot be queued by accident (10.3, 10.4).
+?>
+<form method="post" action="<?= e($url) ?>" data-offline="check">
     <?= Resm\Csrf::field() ?>
     <input type="hidden" name="shift_id" value="<?= e($shift['id']) ?>">
     <input type="hidden" name="type" value="<?= $in ? 'out' : 'in' ?>">
@@ -59,6 +64,8 @@ $url = $app->url('check-in');
     <button class="button button--primary check-button" type="submit">
         <?= $in ? 'CHECK OUT' : 'CHECK IN' ?>
     </button>
+
+    <p class="offline-note" data-offline-note hidden></p>
 </form>
 
 <p class="field__hint">

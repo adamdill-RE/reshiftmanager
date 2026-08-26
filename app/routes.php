@@ -117,6 +117,57 @@ $router->post('logout', static function (App $app, Request $request): Response {
 // ---------------------------------------------------------------------------
 
 /*
+ * Replaying the offline queue (spec 10.3).
+ *
+ * One queued event per request. The queue is a handful of taps, so a batch
+ * body would buy nothing and cost the ability to say which item failed — and
+ * with each item answered on its own, the client deletes exactly what landed
+ * and keeps exactly what did not.
+ *
+ * This is the ONLY write in the application that may arrive late, and it is
+ * deliberately limited to the three things spec 10.3 names: check in, check
+ * out, lunch. Officer assignment writes are never optimistic and never queued;
+ * two officers assigning at once is resolved by the server and by the unique
+ * indexes on assignment, which a replay from a pocket cannot participate in.
+ */
+$router->post('api/sync', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return pollResponse(Response::json(['ok' => false, 'error' => 'signed-out', 'retry' => false], 401));
+    }
+
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        // Worth retrying, once the client has a fresh token: the usual cause
+        // is a page the service worker served from cache, carrying a token
+        // from a session that has since rotated.
+        return pollResponse(Response::json(['ok' => false, 'error' => 'stale-token', 'retry' => true], 400));
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return pollResponse(Response::json(['ok' => false, 'error' => 'no-season', 'retry' => true], 409));
+    }
+
+    $result = replay($app)->apply($user, (int) $season['id'], [
+        'kind' => $request->input('kind'),
+        'shift' => (int) $request->input('shift', '0'),
+        'type' => $request->input('type'),
+        'state' => $request->input('state'),
+        'at' => $request->input('at'),
+    ]);
+
+    return pollResponse(Response::json([
+        'ok' => $result['ok'],
+        'error' => $result['error'],
+        'retry' => $result['retry'],
+        // Echoed so the client can delete exactly the item it sent, without
+        // having to match on anything it computed itself.
+        'client_id' => $request->input('client_id'),
+        'at' => $result['at'],
+    ], $result['status']));
+});
+
+/*
  * What the service worker caches, and under what version. Unauthenticated on
  * purpose: it lists only asset URLs that are public anyway, and the worker has
  * to be able to install from the login screen — before anybody has signed in
@@ -359,6 +410,14 @@ $router->get('api/state', static function (App $app, Request $request): Response
         return pollResponse(Response::json(['error' => 'no-shift'], 404));
     }
 
+    // Read BEFORE the session is closed: Csrf::token mints and stores one when
+    // the session has none, and a write after session_write_close is a write
+    // that goes nowhere. It rides along because the offline queue needs a
+    // token the server will still accept, and the page it was rendered into
+    // may have come from the service worker's cache with a token from a
+    // session that has since rotated (spec 10.3, 10.5).
+    $token = Csrf::token();
+
     // The session is not needed past this point, and holding it open serialises
     // every other request from the same phone behind the poll — PHP's session
     // lock is per-session, so a poll every ten seconds would otherwise be ten
@@ -383,6 +442,7 @@ $router->get('api/state', static function (App $app, Request $request): Response
         'shift' => $shiftId,
         'version' => $version,
         'served_at' => $app->now()->format('c'),
+        'csrf' => $token,
         'closes_at' => $closesAt?->format('c'),
         // Null for anyone the strip does not apply to — an officer running a
         // team's board who is not checked into it himself. The version still
@@ -1316,6 +1376,11 @@ function currentShift(App $app): CurrentShift
 function attendance(App $app): Attendance
 {
     return new Attendance($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function replay(App $app): Resm\Shift\Replay
+{
+    return new Resm\Shift\Replay($app->db(), attendance($app));
 }
 
 function pollState(App $app): Resm\Poll\State
