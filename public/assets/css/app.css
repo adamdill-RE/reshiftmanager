@@ -782,3 +782,204 @@ details[open] > .disclosure::before {
 .coverage__item--short .coverage__figure {
     color: var(--danger);
 }
+
+/* ---------------------------------------------------------------------------
+   The assign board (spec 6.9.4)
+   --------------------------------------------------------------------------- */
+
+/* Position-first / roster-first. Both reach the same two sheets. */
+.modes {
+    display: flex;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.modes__option {
+    flex: 1 1 50%;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    padding: 0 0.5rem;
+}
+
+.modes__option--on {
+    background: var(--surface-sunken);
+}
+
+/* Search by last name, alongside the chip row. */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--touch-gap);
+    margin-bottom: 0.75rem;
+}
+
+.filters .field {
+    flex: 1 1 12rem;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+/* The chip row scrolls sideways inside itself rather than widening the page. */
+.chiprow {
+    display: flex;
+    gap: var(--touch-gap);
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Certified is what an officer signed off; preferred is what the man asked
+   for. Two independent facts, told apart by shape as well as colour (7.3). */
+.chip--certified {
+    border-color: var(--rodeo-brown);
+    color: var(--text);
+}
+
+.chip--preferred {
+    border-style: dashed;
+}
+
+.chip--lunch {
+    background: var(--warn-surface);
+    color: var(--warn);
+    border-color: var(--warn);
+}
+
+/* The 5.5 clash. The only place either officer can see it. */
+.chip--overlap {
+    background: var(--warn-surface);
+    color: var(--warn);
+    border-color: var(--warn);
+    white-space: normal;
+}
+
+/* A filter chip is a tap target, so it is bigger than an informational one. */
+.chip--filter {
+    min-height: var(--touch-min);
+    padding: 0 0.9rem;
+    font-size: 0.95rem;
+    text-decoration: none;
+    color: var(--text);
+    flex: 0 0 auto;
+}
+
+.chip--on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+}
+
+/* The board and the sheets are all the same list of tappable rows. */
+.picks {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--touch-gap);
+}
+
+.pick {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    width: 100%;
+    min-height: var(--touch-min);
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    color: var(--text);
+    text-align: left;
+    text-decoration: none;
+}
+
+/* The <button> flavour has to match the <a> one exactly, or a board reads as
+   two different kinds of thing depending on which mode you came in by. */
+.pick--button {
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.pick--filled {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+    flex-wrap: wrap;
+}
+
+/* Vacant and critical. Red is correct here and stays correct on a short
+   night — 37 critical positions against 25 people (spec 5.4, 8.1). Paired
+   with the word "vacant", never colour alone. */
+.pick--critical {
+    border-color: var(--danger);
+    border-left-width: 6px;
+    background: var(--danger-surface);
+}
+
+.pick__name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.pick__meta {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.pick__holder {
+    display: inline-block;
+    margin-right: 0.4rem;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.pinned__heading {
+    color: var(--danger);
+}
+
+.group {
+    margin-bottom: 0.75rem;
+}
+
+.group > .disclosure {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+}

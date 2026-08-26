@@ -102,9 +102,198 @@ $router->post('officer/phase', static function (App $app, Request $request): Res
     return Response::redirect(officerUrl($app, $ctx, (string) $request->input('return', 'officer'), $extra));
 });
 
+
+// ---------------------------------------------------------------------------
+// Assign Unload / Assign Bump and Run (spec 6.9.4)
+//
+// The screen that determines whether the application succeeds. Two taps per
+// placement and no drag and drop -- which is the intuitive choice and the
+// wrong one, being unreliable with gloves, on wet glass, and one-handed.
+//
+// Both modes are server-rendered sheets rather than anything scripted: tapping
+// a vacant position opens a page of eligible people, tapping a name posts the
+// placement. Two taps either way round, and it works with scripting off.
+// ---------------------------------------------------------------------------
+
+$router->get('officer/assign/{phase}', static function (App $app, Request $request, array $params): Response {
+    $ctx = officerContext($app, $request, Capability::AssignPositions);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+
+    $phase = (string) ($params['phase'] ?? '');
+    if (!PhaseControl::isPhase($phase)) {
+        return Response::html(officerEmpty($app, 'Not found', 'That is not a phase.'), 404);
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to assign anybody to.', 422);
+    }
+
+    return Response::html(assignPage($app, officerWithPhase($app, $ctx, $phase), $request));
+});
+
+$router->post('officer/assign/{phase}', static function (App $app, Request $request, array $params): Response {
+    $ctx = officerContext($app, $request, Capability::AssignPositions);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+
+    $phase = (string) ($params['phase'] ?? '');
+    if (!PhaseControl::isPhase($phase)) {
+        return Response::html(officerEmpty($app, 'Not found', 'That is not a phase.'), 404);
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to assign anybody to.', 422);
+    }
+
+    $ctx = officerWithPhase($app, $ctx, $phase);
+
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(
+            assignPage($app, $ctx, $request, error: 'That page went stale. Try again.'),
+            400
+        );
+    }
+
+    $positionId = officerIntInput($request, 'position_id') ?? 0;
+    $userId = officerIntInput($request, 'user_id') ?? 0;
+    $service = officerAssignments($app);
+
+    $result = match ((string) $request->input('action', '')) {
+        'assign' => $service->assign($ctx['user'], $ctx['shift'], $phase, $positionId, $userId),
+        'vacate' => $service->vacate($ctx['user'], $ctx['shift'], $phase, $positionId, $userId),
+        default => ['ok' => false, 'error' => 'Unknown action.', 'carried' => false, 'vacated' => 0, 'taken' => false],
+    };
+
+    if (!$result['ok']) {
+        // A lost race re-reads the board underneath the message, so the officer
+        // can see who did get the spot rather than being told to guess.
+        return Response::html(
+            assignPage($app, officerWithPhase($app, $ctx, $phase), $request, error: $result['error']),
+            $result['taken'] ? 409 : 422
+        );
+    }
+
+    // Redirect after posting, so a reload on the tarmac does not re-assign.
+    $extra = 'placed=1';
+    if ($result['carried']) {
+        $extra .= '&carried=1';
+    }
+    if (($request->input('mode') ?? '') !== '') {
+        $extra .= '&mode=' . rawurlencode((string) $request->input('mode'));
+    }
+
+    return Response::redirect(officerUrl($app, $ctx, 'officer/assign/' . $phase, $extra));
+});
+
 // ---------------------------------------------------------------------------
 // Shared scaffolding
 // ---------------------------------------------------------------------------
+
+function officerAssignments(App $app): Resm\Officer\Assignments
+{
+    return new Resm\Officer\Assignments($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function officerBoard(App $app): Resm\Officer\Board
+{
+    return new Resm\Officer\Board($app->db());
+}
+
+/**
+ * The same context, read for a named phase.
+ *
+ * An officer sets Bump and Run up while the shift is still running Unload, so
+ * the board he is editing and the phase the shift is in are two different
+ * facts. The counter has to follow the board, or it reports on a board nobody
+ * is looking at.
+ *
+ * @param array<string, mixed> $ctx
+ * @return array<string, mixed>
+ */
+function officerWithPhase(App $app, array $ctx, string $phase): array
+{
+    if ($ctx['shift'] === null) {
+        return $ctx;
+    }
+
+    $ctx['phase'] = $phase;
+    $ctx['coverage'] = officerCoverage($app)->forShift(
+        (int) $ctx['shift']['id'],
+        (int) $ctx['team']['id'],
+        (int) $ctx['season']['id'],
+        $phase,
+    );
+
+    return $ctx;
+}
+
+/**
+ * The assign board, in whichever of its two modes was asked for, or one of the
+ * two sheets that a tap on it opens.
+ *
+ * @param array<string, mixed> $ctx
+ */
+function assignPage(App $app, array $ctx, Request $request, ?string $error = null): string
+{
+    $phase = (string) $ctx['phase'];
+    $shiftId = (int) $ctx['shift']['id'];
+    $teamId = (int) $ctx['team']['id'];
+    $seasonId = (int) $ctx['season']['id'];
+
+    $board = officerBoard($app);
+    $groups = $board->groups($shiftId, $phase);
+
+    $filters = [
+        'search' => (string) ($request->input('q') ?? ''),
+        'skill' => (string) ($request->input('skill') ?? ''),
+    ];
+    $available = $board->available($shiftId, $teamId, $seasonId, $phase, $filters);
+
+    $data = $ctx + [
+        'title' => 'Assign ' . PhaseControl::label($phase),
+        'error' => $error,
+        'notice' => $request->input('placed') === null
+            ? null
+            : ($request->input('carried') === null
+                ? 'Placed.'
+                : 'Placed, and carried into Bump and Run.'),
+        'groups' => $groups,
+        'criticalVacancies' => Resm\Officer\Board::criticalVacancies($groups),
+        'available' => $available,
+        'chips' => $board->chipSkills(),
+        'filters' => $filters,
+        'mode' => (string) $request->input('mode') === 'roster' ? 'roster' : 'position',
+        'back' => officerBack($app, $ctx),
+    ];
+
+    // A tap on a position, or on a name: the second half of the two taps.
+    $positionId = officerIntInput($request, 'position');
+    if ($positionId !== null) {
+        $position = $board->position($shiftId, $phase, $positionId);
+        if ($position !== null) {
+            return (new View($app))->render('officer/sheet-position', $data + [
+                'title' => $position['label'],
+                'position' => $position,
+            ]);
+        }
+    }
+
+    $personId = officerIntInput($request, 'person');
+    if ($personId !== null) {
+        foreach ($available as $candidate) {
+            if ((int) $candidate['id'] === $personId) {
+                return (new View($app))->render('officer/sheet-person', $data + [
+                    'title' => $candidate['list_name'],
+                    'person' => $candidate,
+                    'vacancies' => Resm\Officer\Board::vacancies($groups),
+                ]);
+            }
+        }
+    }
+
+    return (new View($app))->render('officer/assign', $data);
+}
 
 function officerShift(App $app): OfficerShift
 {
