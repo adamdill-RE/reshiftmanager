@@ -675,3 +675,427 @@ details[open] > .disclosure::before {
     font-weight: 700;
     line-height: 1.15;
 }
+
+/* ---------------------------------------------------------------------------
+   Officer Menu (spec 6.9)
+   --------------------------------------------------------------------------- */
+
+/* Team and shift selectors. Side by side where there is room, stacked on a
+   narrow phone, and the Show button is hidden by picker.js once the change
+   handler is attached. */
+.picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--touch-gap);
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.picker .field {
+    flex: 1 1 10rem;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+/* The phase toggle, spec 6.9.1. The active half is filled Rodeo Orange with
+   Ink on top — never white, which at 2.9:1 would fail contrast outright
+   (spec 9.1). */
+.phase {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.phase__option {
+    flex: 1 1 50%;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    border: 0;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+.phase__option--on {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+/* The coverage counter, spec 6.9.2. Five figures, each one a tap target that
+   filters the list behind it. */
+.coverage {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--border);
+    overflow: hidden;
+}
+
+.coverage__item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: var(--touch-min);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.5rem 0.15rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    text-decoration: none;
+}
+
+.coverage__figure {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.coverage__label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* Critical short is red on purpose and is not an error state: Bump and Run has
+   37 critical positions against a shift that can run 25 people, so on a short
+   night this is the board telling the truth (spec 5.4, 8.1). */
+.coverage__item--short {
+    background: var(--danger-surface);
+}
+
+.coverage__item--short .coverage__figure {
+    color: var(--danger);
+}
+
+/* ---------------------------------------------------------------------------
+   The assign board (spec 6.9.4)
+   --------------------------------------------------------------------------- */
+
+/* Position-first / roster-first. Both reach the same two sheets. */
+.modes {
+    display: flex;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.modes__option {
+    flex: 1 1 50%;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    padding: 0 0.5rem;
+}
+
+.modes__option--on {
+    background: var(--surface-sunken);
+}
+
+/* Search by last name, alongside the chip row. */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--touch-gap);
+    margin-bottom: 0.75rem;
+}
+
+.filters .field {
+    flex: 1 1 12rem;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+/* The chip row scrolls sideways inside itself rather than widening the page. */
+.chiprow {
+    display: flex;
+    gap: var(--touch-gap);
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Certified is what an officer signed off; preferred is what the man asked
+   for. Two independent facts, told apart by shape as well as colour (7.3). */
+.chip--certified {
+    border-color: var(--rodeo-brown);
+    color: var(--text);
+}
+
+.chip--preferred {
+    border-style: dashed;
+}
+
+.chip--lunch {
+    background: var(--warn-surface);
+    color: var(--warn);
+    border-color: var(--warn);
+}
+
+/* The 5.5 clash. The only place either officer can see it. */
+.chip--overlap {
+    background: var(--warn-surface);
+    color: var(--warn);
+    border-color: var(--warn);
+    white-space: normal;
+}
+
+/* A filter chip is a tap target, so it is bigger than an informational one. */
+.chip--filter {
+    min-height: var(--touch-min);
+    padding: 0 0.9rem;
+    font-size: 0.95rem;
+    text-decoration: none;
+    color: var(--text);
+    flex: 0 0 auto;
+}
+
+.chip--on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+}
+
+/* The board and the sheets are all the same list of tappable rows. */
+.picks {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--touch-gap);
+}
+
+.pick {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    width: 100%;
+    min-height: var(--touch-min);
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    color: var(--text);
+    text-align: left;
+    text-decoration: none;
+}
+
+/* The <button> flavour has to match the <a> one exactly, or a board reads as
+   two different kinds of thing depending on which mode you came in by. */
+.pick--button {
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.pick--filled {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+    flex-wrap: wrap;
+}
+
+/* Vacant and critical. Red is correct here and stays correct on a short
+   night — 37 critical positions against 25 people (spec 5.4, 8.1). Paired
+   with the word "vacant", never colour alone. */
+.pick--critical {
+    border-color: var(--danger);
+    border-left-width: 6px;
+    background: var(--danger-surface);
+}
+
+.pick__name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.pick__meta {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.pick__holder {
+    display: inline-block;
+    margin-right: 0.4rem;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.pinned__heading {
+    color: var(--danger);
+}
+
+.group {
+    margin-bottom: 0.75rem;
+}
+
+.group > .disclosure {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+}
+
+/* ---------------------------------------------------------------------------
+   The people screens (spec 6.9.3, 6.9.8, 6.9.9, 6.9.11)
+   --------------------------------------------------------------------------- */
+
+.people {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--touch-gap);
+}
+
+.person {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.75rem 0.9rem;
+}
+
+.person__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.2rem;
+}
+
+.person__name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.person__meta {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* Buttons wrap rather than widening the row: a long name and four actions
+   must not push the page sideways on a 390px screen. */
+.person__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--touch-gap);
+    margin-top: 0.6rem;
+}
+
+.person__actions form {
+    margin: 0;
+}
+
+.chip--equipment {
+    border-style: dotted;
+}
+
+.coverage__item--on {
+    background: var(--surface-sunken);
+}
+
+/* A destructive action opens its explanation before it can be taken
+   (spec 9.3). No small dismiss control: closing it is the same summary. */
+.confirm > summary {
+    list-style: none;
+}
+
+.confirm > summary::-webkit-details-marker {
+    display: none;
+}
+
+.confirm[open] {
+    display: block;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+}
+
+.confirm form {
+    margin: 0.5rem 0 0;
+}
+
+.disclosure-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.disclosure-block[open] > .disclosure {
+    margin-bottom: 0.75rem;
+}
+
+/* The read-only boards (spec 6.9.7): position left, whoever is there right.
+   Scrolls inside itself so a long position name never widens the page. */
+.board {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.board th {
+    width: 55%;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.board td {
+    overflow-wrap: anywhere;
+}
+
+textarea.field__input {
+    font-family: inherit;
+    resize: vertical;
+}

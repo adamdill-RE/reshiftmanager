@@ -20,6 +20,19 @@
     <p class="alert alert--error" role="alert"><?= e($error) ?></p>
 <?php endif; ?>
 
+<h2>Preferred Skills</h2>
+
+<p class="muted">
+    Tell your officers what you would rather do. It shows beside your name when
+    they are filling the board.
+</p>
+
+<p>
+    <a class="button button--quiet" href="<?= e($app->url('tools/skills')) ?>">Set my preferred skills</a>
+</p>
+
+<hr class="divider">
+
 <h2>Change my PIN</h2>
 
 <form method="post" action="<?= e($app->url('tools/pin')) ?>">

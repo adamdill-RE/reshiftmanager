@@ -8,8 +8,9 @@ declare(strict_types=1);
  *   php bin/gen-position-seed.php              write the full seed to stdout
  *   php bin/gen-position-seed.php --out=FILE   write the full seed to a file
  *   php bin/gen-position-seed.php --criticals   write migration 004 to stdout
- *   php bin/gen-position-seed.php --check      compare migration 004 against
- *                                              the spec, non-zero on drift
+ *   php bin/gen-position-seed.php --skills     write migration 005 to stdout
+ *   php bin/gen-position-seed.php --check      compare migrations 004 and 005
+ *                                              against the spec, non-zero on drift
  *
  * The 98 positions and their flags are transcribed from the table in
  * docs/spec-v2.md section 8.3, which is authoritative. Hand-typing 157
@@ -52,18 +53,64 @@ const GROUPS = [
     'Maxey'                => ['code' => 'maxey',                'sort' => 10],
 ];
 
-// Section 7. Order is the chip row on the assign board (spec 6.9.4), which
-// leads with the certifications an officer actually filters by.
+// Section 7.1. Order is the chip row on the assign board (spec 6.9.4): the
+// eight position skills first, in the order an officer reaches for them, then
+// the two equipment certifications, which are roster information and are not
+// on that row at all.
+// Ids are historical and sort order is presentation, so the two diverge here.
+// Migration 002 handed out 1-8, and Forklift and Golf Cart got 7 and 8 before
+// anyone knew they were a different kind of thing; renumbering them now would
+// rewrite rows that user_skill already points at. So they keep their ids and
+// simply move to the end of the chip order, and the two new skills take 9 and
+// 10 while sorting into the middle.
 const SKILLS = [
-    ['radio',            'Radio'],
-    ['starter',          'Starter'],
-    ['computer',         'Computer'],
-    ['counter',          'Counter'],
-    ['runner',           'Runner'],
-    ['crosswalk_middle', 'Crosswalk Middle'],
-    ['forklift',         'Forklift'],
-    ['golfcart',         'Golf Cart'],
+    ['id' => 1,  'code' => 'radio',               'label' => 'Radio',               'kind' => 'position',  'sort' => 1],
+    ['id' => 2,  'code' => 'starter',             'label' => 'Starter',             'kind' => 'position',  'sort' => 2],
+    ['id' => 3,  'code' => 'computer',            'label' => 'Computer',            'kind' => 'position',  'sort' => 3],
+    ['id' => 4,  'code' => 'counter',             'label' => 'Counter',             'kind' => 'position',  'sort' => 4],
+    ['id' => 5,  'code' => 'runner',              'label' => 'Runner',              'kind' => 'position',  'sort' => 5],
+    ['id' => 6,  'code' => 'crosswalk_middle',    'label' => 'Crosswalk Middle',    'kind' => 'position',  'sort' => 6],
+    ['id' => 9,  'code' => 'crosswalk_perimeter', 'label' => 'Crosswalk Perimeter', 'kind' => 'position',  'sort' => 7],
+    ['id' => 10, 'code' => 'gate',                'label' => 'Gate',                'kind' => 'position',  'sort' => 8],
+    ['id' => 7,  'code' => 'forklift',            'label' => 'Forklift',            'kind' => 'equipment', 'sort' => 9],
+    ['id' => 8,  'code' => 'golfcart',            'label' => 'Golf Cart',           'kind' => 'equipment', 'sort' => 10],
 ];
+
+/** The eight ids migration 002 already handed out. */
+const SEEDED_SKILL_IDS = 8;
+
+/**
+ * Which job skill a position calls for (spec 7.2).
+ *
+ * A rule, not 98 decisions. The order of the tests is the load-bearing part:
+ * Naomi's centre position is called "Center Starter", so checking for Starter
+ * before the crosswalk groups files the crosswalk centre under Starter and
+ * nobody notices.
+ */
+function skillForPosition(string $groupCode, string $label): ?string
+{
+    if ($groupCode === 'naomi_crosswalk' || $groupCode === 'holly_hall_crosswalk') {
+        if (str_contains($label, 'Center')) {
+            return 'crosswalk_middle';
+        }
+        // Bridge work is its own thing, not perimeter work.
+        return str_contains($label, 'Bridge') ? null : 'crosswalk_perimeter';
+    }
+
+    // Every gate: the Main Committee Gate and all ten Back Gates alike.
+    if (str_contains($label, 'Gate')) {
+        return 'gate';
+    }
+
+    foreach (['Computer' => 'computer', 'Counter' => 'counter',
+              'Runner' => 'runner', 'Starter' => 'starter'] as $needle => $skill) {
+        if (str_contains($label, $needle)) {
+            return $skill;
+        }
+    }
+
+    return null;
+}
 
 /** Counts stated in section 8: they are the check on the transcription. */
 const EXPECTED = [
@@ -208,8 +255,13 @@ $out[] = '';
 
 $out[] = 'INSERT INTO skill (id, code, label, sort_order) VALUES';
 $rows = [];
-foreach (SKILLS as $index => [$code, $label]) {
-    $rows[] = sprintf('    (%d, %s, %s, %d)', $index + 1, quote($code), quote($label), $index + 1);
+$seeded = array_values(array_filter(SKILLS, static fn (array $s): bool => $s['id'] <= SEEDED_SKILL_IDS));
+usort($seeded, static fn (array $a, array $b): int => $a['id'] <=> $b['id']);
+foreach ($seeded as $skill) {
+    // Migration 002 as it was written: eight skills, no kind, sort order equal
+    // to id. 005 adds the column, the last two skills and the new sort order,
+    // so a fresh database and an upgraded one converge on the same rows.
+    $rows[] = sprintf('    (%d, %s, %s, %d)', $skill['id'], quote($skill['code']), quote($skill['label']), $skill['id']);
 }
 $out[] = implode(",\n", $rows) . ';';
 $out[] = '';
@@ -347,6 +399,111 @@ $m[] = '';
 
 $criticalsSql = implode("\n", $m);
 
+// ---------------------------------------------------------------------------
+// Migration 005: the skills model (spec 7)
+// ---------------------------------------------------------------------------
+
+$skillRows = [];
+$mappedPositions = 0;
+$perSkill = [];
+$positionId = 0;
+
+foreach ($positions as $position) {
+    $positionId++;
+    $skill = skillForPosition(GROUPS[$position['group']]['code'], $position['label']);
+    if ($skill === null) {
+        continue;
+    }
+    $mappedPositions++;
+    $perSkill[$skill] = ($perSkill[$skill] ?? 0) + 1;
+    $skillRows[$skill][] = $positionId;
+}
+
+$k = [];
+$k[] = '-- Skills: ten of them, in two kinds, and what each position calls for.';
+$k[] = '--';
+$k[] = '-- GENERATED by bin/gen-position-seed.php --skills from docs/spec-v2.md';
+$k[] = '-- section 7. Do not hand-edit.';
+$k[] = '--';
+$k[] = sprintf('-- %d skills. %d of %d positions map to one; the rest are their own jobs', count(SKILLS), $mappedPositions, $actual['positions']);
+$k[] = '-- with nothing shared to certify (7.2).';
+$k[] = '--';
+$k[] = '-- Nothing here restricts an assignment. Certification is not a permission and';
+$k[] = '-- preference is not a claim: both are shown beside a name so the officer can';
+$k[] = '-- decide, and who stands where is settled on the ground (7.4).';
+$k[] = '--';
+$k[] = '-- resm:atomic';
+$k[] = '';
+$k[] = '-- Position skills go on the assign board chip row; equipment certifications';
+$k[] = '-- are roster information and stay off it (7.1).';
+$k[] = "ALTER TABLE skill ADD COLUMN kind ENUM('position','equipment') NOT NULL DEFAULT 'position' AFTER label;";
+$k[] = '';
+
+$k[] = '-- The two new position skills (7.1).';
+foreach (SKILLS as $skill) {
+    if ($skill['id'] <= SEEDED_SKILL_IDS) {
+        continue;
+    }
+    $k[] = sprintf(
+        'INSERT INTO skill (id, code, label, kind, sort_order) VALUES (%d, %s, %s, %s, %d);',
+        $skill['id'],
+        quote($skill['code']),
+        quote($skill['label']),
+        quote($skill['kind']),
+        $skill['sort']
+    );
+}
+$k[] = '';
+$k[] = '-- Everything already seeded gets its kind, and the two equipment';
+$k[] = '-- certifications move to the end of the chip order without changing id.';
+foreach (SKILLS as $skill) {
+    if ($skill['id'] > SEEDED_SKILL_IDS) {
+        continue;
+    }
+    $k[] = sprintf(
+        'UPDATE skill SET kind = %s, sort_order = %d WHERE code = %s;',
+        quote($skill['kind']),
+        $skill['sort'],
+        quote($skill['code'])
+    );
+}
+$k[] = '';
+$k[] = '-- At most one job skill per position. Radio stays its own flag because it is';
+$k[] = '-- orthogonal: Reed Starter 1 wants a Starter AND a radio.';
+$k[] = 'ALTER TABLE position ADD COLUMN skill_id TINYINT UNSIGNED NULL AFTER is_radio,';
+$k[] = '    ADD CONSTRAINT fk_position_skill FOREIGN KEY (skill_id) REFERENCES skill (id) ON DELETE SET NULL;';
+$k[] = '';
+
+$skillIds = [];
+foreach (SKILLS as $skill) {
+    $skillIds[$skill['code']] = $skill['id'];
+}
+foreach ($skillRows as $skill => $ids) {
+    sort($ids);
+    $k[] = sprintf(
+        '-- %s: %d positions',
+        $skill,
+        count($ids)
+    );
+    $k[] = sprintf(
+        'UPDATE position SET skill_id = %d WHERE id IN (%s);',
+        $skillIds[$skill],
+        implode(', ', $ids)
+    );
+}
+$k[] = '';
+$k[] = '-- Certified and preferred are independent facts about the same pair (7.3).';
+$k[] = '-- A man can be certified in something he would rather not do, and prefer';
+$k[] = '-- something he is not yet certified for -- which is a training list nobody';
+$k[] = '-- had to compile. Certified is granted_at being set, so it becomes nullable.';
+$k[] = 'ALTER TABLE user_skill';
+$k[] = '    MODIFY COLUMN granted_at DATETIME NULL DEFAULT NULL,';
+$k[] = '    ADD COLUMN is_preferred TINYINT(1) NOT NULL DEFAULT 0 AFTER skill_id,';
+$k[] = '    ADD COLUMN preferred_at DATETIME NULL DEFAULT NULL AFTER is_preferred;';
+$k[] = '';
+
+$skillsSql = implode("\n", $k);
+
 $target = null;
 foreach (array_slice($argv, 1) as $arg) {
     if (str_starts_with($arg, '--out=')) {
@@ -355,6 +512,7 @@ foreach (array_slice($argv, 1) as $arg) {
 }
 
 $wantCriticals = in_array('--criticals', array_slice($argv, 1), true);
+$wantSkills = in_array('--skills', array_slice($argv, 1), true);
 
 if (in_array('--check', array_slice($argv, 1), true)) {
     $committed = $root . '/db/migrations/004_critical_positions.sql';
@@ -364,11 +522,31 @@ if (in_array('--check', array_slice($argv, 1), true)) {
     if (rtrim((string) file_get_contents($committed)) !== rtrim($criticalsSql)) {
         fail('004_critical_positions.sql no longer matches docs/spec-v2.md section 8.3');
     }
-    echo sprintf("Criticality matches the specification (%d positions).\n", $actual['critical']);
+
+    $skillsFile = $root . '/db/migrations/005_skills.sql';
+    if (!is_file($skillsFile)) {
+        fail("no committed migration at {$skillsFile}");
+    }
+    if (rtrim((string) file_get_contents($skillsFile)) !== rtrim($skillsSql)) {
+        fail('005_skills.sql no longer matches docs/spec-v2.md section 7');
+    }
+
+    echo sprintf(
+        "Criticality matches the specification (%d positions).\n"
+        . "Skills match the specification (%d skills, %d of %d positions mapped).\n",
+        $actual['critical'],
+        count(SKILLS),
+        $mappedPositions,
+        $actual['positions']
+    );
     exit(0);
 }
 
-$body = $wantCriticals ? $criticalsSql : $sql;
+$body = match (true) {
+    $wantCriticals => $criticalsSql,
+    $wantSkills => $skillsSql,
+    default => $sql,
+};
 
 if ($target !== null) {
     file_put_contents($target, $body . "\n");

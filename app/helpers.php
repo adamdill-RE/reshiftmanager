@@ -56,3 +56,29 @@ if (!function_exists('icon')) {
             . '</svg>';
     }
 }
+
+if (!function_exists('officerHeader')) {
+    /**
+     * The team/shift selector, phase toggle and coverage counter every officer
+     * screen carries (spec 6.9.1, 6.9.2).
+     *
+     * Here rather than repeated in eleven templates, and taking an explicit
+     * list of keys rather than get_defined_vars(), so what the partial depends
+     * on is written down in one place instead of being whatever happened to be
+     * in scope at the call site.
+     *
+     * @param array<string, mixed> $vars the officer context
+     * @param string $self this screen's path, for the selector to post back to
+     */
+    function officerHeader(Resm\App $app, array $vars, string $self): string
+    {
+        $keys = ['teams', 'team', 'shifts', 'shift', 'phase', 'coverage', 'user'];
+
+        $data = ['self' => $self];
+        foreach ($keys as $key) {
+            $data[$key] = $vars[$key] ?? null;
+        }
+
+        return (new Resm\View($app))->render('officer/header', $data, layout: null);
+    }
+}

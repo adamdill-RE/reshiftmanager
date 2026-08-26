@@ -220,3 +220,162 @@ test('every group holds at least one critical position', function (): void {
 
     assertSame([], $bare);
 });
+
+// ---------------------------------------------------------------------------
+// Skills (spec 7), added by migration 005
+// ---------------------------------------------------------------------------
+
+/**
+ * The mapping rule from spec 7.2, transcribed a second time.
+ *
+ * Deliberately a separate copy from bin/gen-position-seed.php: the generator
+ * writes the migration and this checks what the migration produced, so a
+ * shared helper would let one mistake agree with itself.
+ */
+function expectedSkillFor(string $groupCode, string $label): ?string
+{
+    if ($groupCode === 'naomi_crosswalk' || $groupCode === 'holly_hall_crosswalk') {
+        if (str_contains($label, 'Center')) {
+            return 'crosswalk_middle';
+        }
+
+        return str_contains($label, 'Bridge') ? null : 'crosswalk_perimeter';
+    }
+    if (str_contains($label, 'Gate')) {
+        return 'gate';
+    }
+    foreach (['Computer' => 'computer', 'Counter' => 'counter',
+              'Runner' => 'runner', 'Starter' => 'starter'] as $needle => $skill) {
+        if (str_contains($label, $needle)) {
+            return $skill;
+        }
+    }
+
+    return null;
+}
+
+test('ten skills, in two kinds, in chip-row order', function (): void {
+    $rows = testDb()->all('SELECT code, kind, sort_order FROM skill ORDER BY sort_order');
+
+    $expected = [
+        ['radio', 'position'], ['starter', 'position'], ['computer', 'position'],
+        ['counter', 'position'], ['runner', 'position'], ['crosswalk_middle', 'position'],
+        ['crosswalk_perimeter', 'position'], ['gate', 'position'],
+        ['forklift', 'equipment'], ['golfcart', 'equipment'],
+    ];
+
+    assertSame(
+        $expected,
+        array_map(static fn (array $r): array => [(string) $r['code'], (string) $r['kind']], $rows)
+    );
+});
+
+test('the two equipment certifications kept the ids migration 002 gave them', function (): void {
+    // Renumbering would rewrite rows user_skill already points at.
+    $db = testDb();
+    assertSame(7, (int) $db->value("SELECT id FROM skill WHERE code = 'forklift'"));
+    assertSame(8, (int) $db->value("SELECT id FROM skill WHERE code = 'golfcart'"));
+});
+
+test('every position maps to the skill the rule gives it', function (): void {
+    $rows = testDb()->all(
+        'SELECT g.code AS group_code, p.label, s.code AS skill
+         FROM position p
+         JOIN position_group g ON g.id = p.group_id
+         LEFT JOIN skill s ON s.id = p.skill_id'
+    );
+
+    $wrong = [];
+    foreach ($rows as $row) {
+        $want = expectedSkillFor((string) $row['group_code'], (string) $row['label']);
+        $got = $row['skill'] === null ? null : (string) $row['skill'];
+        if ($want !== $got) {
+            $wrong[] = sprintf('%s: expected %s, got %s', $row['label'], $want ?? 'none', $got ?? 'none');
+        }
+    }
+
+    assertSame([], $wrong, "skill mapping drift:\n" . implode("\n", $wrong));
+});
+
+test('the crosswalk centre is not filed under Starter', function (): void {
+    // "Center Starter" contains Starter, so a rule that checked for it first
+    // would put the crosswalk centre in the wrong place and nobody would see.
+    assertSame('crosswalk_middle', (string) testDb()->value(
+        "SELECT s.code FROM position p JOIN skill s ON s.id = p.skill_id
+          WHERE p.label = 'Center Starter'"
+    ));
+});
+
+test('Gate is every gate, and Bridge is none of them', function (): void {
+    $db = testDb();
+
+    assertSame(12, (int) $db->value(
+        "SELECT COUNT(*) FROM position p JOIN skill s ON s.id = p.skill_id WHERE s.code = 'gate'"
+    ), 'the Main Committee Gate and all ten Back Gates');
+
+    assertSame(6, (int) $db->value(
+        "SELECT COUNT(*) FROM position WHERE label LIKE 'Naomi Bridge%' AND skill_id IS NULL"
+    ), 'bridge work is its own thing');
+});
+
+test('80 of 98 positions carry a skill', function (): void {
+    $db = testDb();
+    assertSame(80, (int) $db->value('SELECT COUNT(*) FROM position WHERE skill_id IS NOT NULL'));
+    assertSame(18, (int) $db->value('SELECT COUNT(*) FROM position WHERE skill_id IS NULL'));
+
+    // Radio is orthogonal — its own flag, not a skill_id (spec 7.2).
+    assertSame(22, (int) $db->value('SELECT COUNT(*) FROM position WHERE is_radio = 1'));
+    assertSame(0, (int) $db->value(
+        "SELECT COUNT(*) FROM position p JOIN skill s ON s.id = p.skill_id WHERE s.code = 'radio'"
+    ));
+});
+
+test('an equipment certification is never what a position asks for', function (): void {
+    assertSame(0, (int) testDb()->value(
+        "SELECT COUNT(*) FROM position p JOIN skill s ON s.id = p.skill_id WHERE s.kind = 'equipment'"
+    ));
+});
+
+test('a preference can exist without a certification, and the reverse', function (): void {
+    // Spec 7.3: two independent facts. Preferring something you are not yet
+    // certified for is a training list nobody had to compile.
+    inRollback(function (Resm\Database $db): void {
+        $db->execute(
+            "INSERT INTO `user` (member_id, last_name, first_name, pin_hash, role)
+             VALUES ('test-pref', 'Pref', 'Test', '!x', 'committeeman')"
+        );
+        $user = $db->lastInsertId();
+        $runner = (int) $db->value("SELECT id FROM skill WHERE code = 'runner'");
+        $gate = (int) $db->value("SELECT id FROM skill WHERE code = 'gate'");
+
+        // Wants to be a runner, nobody has said he can be.
+        $db->execute(
+            'INSERT INTO user_skill (user_id, skill_id, granted_at, is_preferred, preferred_at)
+             VALUES (:u, :s, NULL, 1, UTC_TIMESTAMP())',
+            ['u' => $user, 's' => $runner]
+        );
+        // Certified on the gate, would rather not.
+        $db->execute(
+            'INSERT INTO user_skill (user_id, skill_id, granted_at, is_preferred)
+             VALUES (:u, :s, UTC_TIMESTAMP(), 0)',
+            ['u' => $user, 's' => $gate]
+        );
+
+        // Keyed by code rather than by row order, which is a detail of the
+        // query and not of the thing being tested.
+        $held = [];
+        foreach ($db->all(
+            'SELECT s.code, us.granted_at, us.is_preferred FROM user_skill us
+             JOIN skill s ON s.id = us.skill_id WHERE us.user_id = :u',
+            ['u' => $user]
+        ) as $row) {
+            $held[(string) $row['code']] = $row;
+        }
+
+        assertCount(2, $held);
+        assertSame(null, $held['runner']['granted_at'], 'wants it, not yet certified');
+        assertSame(1, (int) $held['runner']['is_preferred']);
+        assertTrue($held['gate']['granted_at'] !== null, 'certified on the gate');
+        assertSame(0, (int) $held['gate']['is_preferred'], 'and would rather not');
+    });
+});
