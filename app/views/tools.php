@@ -67,6 +67,44 @@
 
 <hr class="divider">
 
+<?php
+// Spec 9.2 and 9.3. The whole section ships hidden and display.js reveals it,
+// because both controls are stored on the device and neither does anything
+// without JavaScript — and an inert Dark button is worse than no Dark button.
+// The stylesheet has carried :root[data-theme] and :root[data-text] since
+// phase 1; this is what finally sets them.
+?>
+<section data-display hidden>
+    <h2>Display</h2>
+
+    <h3 id="theme-label">Theme</h3>
+    <p class="muted">
+        Night shifts end at 02:00. A white screen on a dark tarmac costs you
+        your night vision, so this follows your phone unless you pin it.
+    </p>
+
+    <div class="choice" role="group" aria-labelledby="theme-label">
+        <button class="choice__option" type="button" data-theme-choice="auto">Auto</button>
+        <button class="choice__option" type="button" data-theme-choice="light">Light</button>
+        <button class="choice__option" type="button" data-theme-choice="dark">Dark</button>
+    </div>
+
+    <h3 id="text-label">Large Text</h3>
+    <p class="muted">Everything about a quarter larger.</p>
+
+    <div class="choice" role="group" aria-labelledby="text-label">
+        <button class="choice__option" type="button" data-text-choice="normal">Normal</button>
+        <button class="choice__option" type="button" data-text-choice="large">Large</button>
+    </div>
+
+    <p class="field__hint" data-display-warning hidden>
+        This phone will not remember the setting — it is set to block site
+        data. It will hold until you close the app.
+    </p>
+</section>
+
+<hr class="divider">
+
 <h2>Install this app on your phone</h2>
 
 <p class="muted">

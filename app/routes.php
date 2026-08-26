@@ -1456,7 +1456,7 @@ function toolsPage(App $app, Resm\Auth\Identity $user, ?string $error = null, ?s
         'user' => $user,
         'error' => $error,
         'notice' => $notice,
-        'scripts' => ['js/install.js'],
+        'scripts' => ['js/display.js', 'js/install.js'],
         'back' => ['url' => $app->url(), 'label' => 'Menu'],
     ]);
 }

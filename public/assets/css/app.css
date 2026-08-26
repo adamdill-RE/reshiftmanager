@@ -1151,3 +1151,41 @@ textarea.field__input {
 .install__steps li:last-child {
     margin-bottom: 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Choice groups — Theme and Large Text (spec 9.2, 9.3)
+   --------------------------------------------------------------------------- */
+
+/* The same segmented shape as the phase toggle, which is the control officers
+   already know, but two or three options wide instead of always two. */
+.choice {
+    display: flex;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.choice__option {
+    flex: 1 1 0;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    border: 0;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* Rodeo Orange with dark text on top, never white — the fill is the accent and
+   the accent is 2.9:1 against white (spec 9.1). */
+.choice__option--on {
+    background: var(--accent);
+    color: var(--accent-text);
+}
