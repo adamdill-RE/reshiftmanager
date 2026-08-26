@@ -983,3 +983,97 @@ details[open] > .disclosure::before {
     justify-content: space-between;
     gap: var(--touch-gap);
 }
+
+/* ---------------------------------------------------------------------------
+   The people screens (spec 6.9.3, 6.9.8, 6.9.9, 6.9.11)
+   --------------------------------------------------------------------------- */
+
+.people {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--touch-gap);
+}
+
+.person {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.75rem 0.9rem;
+}
+
+.person__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.2rem;
+}
+
+.person__name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.person__meta {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* Buttons wrap rather than widening the row: a long name and four actions
+   must not push the page sideways on a 390px screen. */
+.person__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--touch-gap);
+    margin-top: 0.6rem;
+}
+
+.person__actions form {
+    margin: 0;
+}
+
+.chip--equipment {
+    border-style: dotted;
+}
+
+.coverage__item--on {
+    background: var(--surface-sunken);
+}
+
+/* A destructive action opens its explanation before it can be taken
+   (spec 9.3). No small dismiss control: closing it is the same summary. */
+.confirm > summary {
+    list-style: none;
+}
+
+.confirm > summary::-webkit-details-marker {
+    display: none;
+}
+
+.confirm[open] {
+    display: block;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+}
+
+.confirm form {
+    margin: 0.5rem 0 0;
+}
+
+.disclosure-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.disclosure-block[open] > .disclosure {
+    margin-bottom: 0.75rem;
+}

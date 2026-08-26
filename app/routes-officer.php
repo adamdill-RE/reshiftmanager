@@ -186,9 +186,320 @@ $router->post('officer/assign/{phase}', static function (App $app, Request $requ
     return Response::redirect(officerUrl($app, $ctx, 'officer/assign/' . $phase, $extra));
 });
 
+
+// ---------------------------------------------------------------------------
+// View Roster (6.9.3), View Checked In / View Absent (6.9.8),
+// Lunch Management (6.9.9) and Reset PINs (6.9.11)
+//
+// One list of people, filtered five ways. The read is shared so the five
+// screens cannot disagree about who is on the tarmac.
+// ---------------------------------------------------------------------------
+
+foreach (['roster', 'checked-in', 'absent', 'lunch', 'pins'] as $screen) {
+    $router->get('officer/' . $screen, static function (App $app, Request $request) use ($screen): Response {
+        $ctx = officerContext($app, $request, OfficerMenu::SECTIONS[$screen]['capability']);
+        if ($ctx instanceof Response) {
+            return $ctx;
+        }
+        if ($ctx['shift'] === null) {
+            return officerFailure($app, $ctx, 'There is no shift to show a roster for.', 422);
+        }
+
+        return Response::html(rosterPage($app, $ctx, $request, $screen));
+    });
+}
+
+$router->post('officer/roster', static function (App $app, Request $request): Response {
+    return officerPeoplePost($app, $request, 'roster');
+});
+
+$router->post('officer/lunch', static function (App $app, Request $request): Response {
+    return officerPeoplePost($app, $request, 'lunch');
+});
+
+$router->post('officer/pins', static function (App $app, Request $request): Response {
+    return officerPeoplePost($app, $request, 'pins');
+});
+
+// ---------------------------------------------------------------------------
+// Edit Certified Skills (spec 7.3, Capability::EditCertifiedSkills)
+// ---------------------------------------------------------------------------
+
+$router->get('officer/skills/{id}', static function (App $app, Request $request, array $params): Response {
+    $ctx = officerContext($app, $request, Capability::EditCertifiedSkills);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to show a roster for.', 422);
+    }
+
+    return officerSkillSheet($app, $ctx, $request, (int) ($params['id'] ?? 0));
+});
+
+$router->post('officer/skills/{id}', static function (App $app, Request $request, array $params): Response {
+    $ctx = officerContext($app, $request, Capability::EditCertifiedSkills);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to show a roster for.', 422);
+    }
+
+    $userId = (int) ($params['id'] ?? 0);
+
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return officerSkillSheet($app, $ctx, $request, $userId, error: 'That page went stale. Try again.', status: 400);
+    }
+
+    // inputList, not input: a checkbox group posts skills[] and input()
+    // answers null for anything that is not a string -- which would read as
+    // "he ticked nothing" and quietly clear every certification he had.
+    $result = officerPeople($app)->setCertified(
+        $ctx['user'],
+        (int) $ctx['team']['id'],
+        (int) $ctx['season']['id'],
+        $userId,
+        $request->inputList('skills'),
+    );
+
+    if (!$result['ok']) {
+        return officerSkillSheet($app, $ctx, $request, $userId, error: $result['error'], status: 422);
+    }
+
+    return Response::redirect(officerUrl($app, $ctx, 'officer/roster', 'saved=1'));
+});
+
 // ---------------------------------------------------------------------------
 // Shared scaffolding
 // ---------------------------------------------------------------------------
+
+function officerPeople(App $app): Resm\Officer\People
+{
+    return new Resm\Officer\People(
+        $app->db(),
+        new Resm\AuditLog($app->db()),
+        $app->config->int('auth.pin_cost', 11),
+        $app->config->string('auth.default_pin', '1234'),
+    );
+}
+
+function officerTeamRoster(App $app): Resm\Officer\TeamRoster
+{
+    return new Resm\Officer\TeamRoster($app->db(), officerBoard($app));
+}
+
+/**
+ * The five people screens, which are one list filtered five ways (6.9.3,
+ * 6.9.8, 6.9.9, 6.9.11).
+ *
+ * @param array<string, mixed> $ctx
+ */
+function rosterPage(
+    App $app,
+    array $ctx,
+    Request $request,
+    string $screen,
+    ?string $error = null,
+    ?string $notice = null,
+): string {
+    $shiftId = (int) $ctx['shift']['id'];
+    $teamId = (int) $ctx['team']['id'];
+    $seasonId = (int) $ctx['season']['id'];
+    $search = (string) ($request->input('q') ?? '');
+
+    $people = officerTeamRoster($app)->forShift($shiftId, $teamId, $seasonId, $search);
+
+    // Absent is no check event at all, never the complement of checked in
+    // (6.9.8): a man who came and went is on neither list.
+    $filtered = match ($screen) {
+        'checked-in' => array_values(array_filter($people, static fn (array $p): bool => $p['checked_in'])),
+        'absent' => array_values(array_filter($people, static fn (array $p): bool => $p['absent'])),
+        default => $people,
+    };
+
+    if ($notice === null && $request->input('saved') !== null) {
+        $notice = 'Saved.';
+    }
+
+    return (new View($app))->render('officer/' . (in_array($screen, ['roster', 'pins', 'lunch'], true) ? $screen : 'people'), $ctx + [
+        'title' => OfficerMenu::SECTIONS[$screen]['label'],
+        'screen' => $screen,
+        'people' => $filtered,
+        'allPeople' => $people,
+        'lunchCounts' => Resm\Officer\TeamRoster::lunchCounts($people),
+        'search' => $search,
+        'lunchFilter' => in_array((string) $request->input('state'), ['not_yet', 'at_lunch', 'done'], true)
+            ? (string) $request->input('state')
+            : '',
+        'skills' => officerBoard($app)->chipSkills(),
+        'error' => $error,
+        'notice' => $notice,
+        'back' => officerBack($app, $ctx),
+    ]);
+}
+
+/**
+ * Everything the people screens post: officer check in and out, lunch state,
+ * PIN resets and walk-ons.
+ *
+ * One handler because they share a guard and a re-render, and because the
+ * capability each action needs is checked against the resolved team here
+ * rather than being assumed from which screen the form was on.
+ */
+function officerPeoplePost(App $app, Request $request, string $screen): Response
+{
+    $action = (string) $request->input('action', '');
+
+    // The capability follows the action, not the screen it was posted from.
+    $capability = match ($action) {
+        'check-in', 'check-out', 'lunch' => Capability::CheckOthersInOut,
+        'reset-pin' => Capability::ResetCommitteemanPin,
+        'walkon' => Capability::AddWalkon,
+        default => Capability::ViewTeamRoster,
+    };
+
+    $ctx = officerContext($app, $request, $capability);
+    if ($ctx instanceof Response) {
+        return $ctx;
+    }
+    if ($ctx['shift'] === null) {
+        return officerFailure($app, $ctx, 'There is no shift to act on.', 422);
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(rosterPage($app, $ctx, $request, $screen, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $teamId = (int) $ctx['team']['id'];
+    $seasonId = (int) $ctx['season']['id'];
+    $shiftId = (int) $ctx['shift']['id'];
+    $userId = officerIntInput($request, 'user_id') ?? 0;
+
+    if ($action === 'walkon') {
+        $result = officerPeople($app)->addWalkon(
+            $ctx['user'],
+            $seasonId,
+            $teamId,
+            (string) $request->input('last_name', ''),
+            (string) $request->input('first_name', ''),
+            (string) $request->input('phone', ''),
+            (string) $request->input('member_id', ''),
+        );
+
+        return $result['ok']
+            ? Response::redirect(officerUrl($app, $ctx, 'officer/' . $screen, 'added=1'))
+            : Response::html(rosterPage($app, $ctx, $request, $screen, error: $result['error']), 422);
+    }
+
+    if ($action === 'reset-pin') {
+        $result = officerPeople($app)->resetPin($ctx['user'], $teamId, $seasonId, $userId);
+
+        return $result['ok']
+            ? Response::redirect(officerUrl($app, $ctx, 'officer/' . $screen, 'reset=1'))
+            : Response::html(rosterPage($app, $ctx, $request, $screen, error: $result['error']), 422);
+    }
+
+    // Check in, check out and lunch all act on somebody on this team, so the
+    // target is resolved through the roster rather than taken from the form.
+    $roster = officerTeamRoster($app)->forShift($shiftId, $teamId, $seasonId);
+    $subject = null;
+    foreach ($roster as $person) {
+        if ((int) $person['id'] === $userId) {
+            $subject = $person;
+            break;
+        }
+    }
+
+    if ($subject === null) {
+        return Response::html(
+            rosterPage($app, $ctx, $request, $screen, error: 'That person is not on this team.'),
+            422
+        );
+    }
+
+    if ($action === 'lunch') {
+        $result = attendance($app)->setLunch(
+            $ctx['user'],
+            $shiftId,
+            $userId,
+            (string) $request->input('state', ''),
+        );
+
+        return $result['ok']
+            ? Response::redirect(officerUrl($app, $ctx, 'officer/' . $screen, 'saved=1'))
+            : Response::html(rosterPage($app, $ctx, $request, $screen, error: $result['error']), 422);
+    }
+
+    if ($action === 'check-in' || $action === 'check-out') {
+        // Attendance reads the subject's own check state off this array, not
+        // the officer's — an officer checking somebody in is the same event
+        // recorded by somebody else.
+        $result = attendance($app)->record(
+            $ctx['user'],
+            [
+                'id' => $shiftId,
+                'check_state' => $subject['check_state'],
+                'checked_at' => $subject['checked_at'],
+            ],
+            $userId,
+            $action === 'check-in' ? 'in' : 'out',
+        );
+
+        return $result['ok']
+            ? Response::redirect(officerUrl($app, $ctx, 'officer/' . $screen, 'saved=1'))
+            : Response::html(rosterPage($app, $ctx, $request, $screen, error: $result['error']), 422);
+    }
+
+    return Response::html(rosterPage($app, $ctx, $request, $screen, error: 'Unknown action.'), 422);
+}
+
+/**
+ * The certified-skills sheet for one man (spec 7.3).
+ *
+ * @param array<string, mixed> $ctx
+ */
+function officerSkillSheet(
+    App $app,
+    array $ctx,
+    Request $request,
+    int $userId,
+    ?string $error = null,
+    int $status = 200,
+): Response {
+    $shiftId = (int) $ctx['shift']['id'];
+    $teamId = (int) $ctx['team']['id'];
+    $seasonId = (int) $ctx['season']['id'];
+
+    $person = null;
+    foreach (officerTeamRoster($app)->forShift($shiftId, $teamId, $seasonId) as $candidate) {
+        if ((int) $candidate['id'] === $userId) {
+            $person = $candidate;
+            break;
+        }
+    }
+
+    if ($person === null) {
+        return Response::html(officerEmpty($app, 'Not found', 'That person is not on this team.'), 404);
+    }
+
+    $held = [];
+    foreach ($person['certified'] as $skill) {
+        $held[$skill['code']] = true;
+    }
+    foreach ($person['equipment'] as $skill) {
+        $held[$skill['code']] = true;
+    }
+
+    return Response::html((new View($app))->render('officer/skills', $ctx + [
+        'title' => $person['list_name'],
+        'person' => $person,
+        'allSkills' => $app->db()->all('SELECT code, label, kind FROM skill ORDER BY sort_order'),
+        'held' => $held,
+        'error' => $error,
+        'notice' => null,
+        'back' => ['url' => officerUrl($app, $ctx, 'officer/roster'), 'label' => 'View Roster'],
+    ]), $status);
+}
 
 function officerAssignments(App $app): Resm\Officer\Assignments
 {

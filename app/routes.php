@@ -148,6 +148,47 @@ $router->post('tools/pin', static function (App $app, Request $request): Respons
     return Response::redirect($app->url('tools?changed=1'));
 });
 
+
+/*
+ * Preferred Skills (spec 7.3), the self-service half.
+ *
+ * Certified is set by an officer and means "he can"; preferred is set here, by
+ * the man himself, and means "he would rather". They are independent on
+ * purpose -- a preference for something he is not yet certified for is the
+ * more useful of the two, because it is a training list nobody had to compile.
+ */
+$router->get('tools/skills', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    return Response::html(preferredSkillsPage($app, $user, notice: $request->input('saved') !== null
+        ? 'Saved. Officers will see these beside your name.'
+        : null));
+});
+
+$router->post('tools/skills', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(preferredSkillsPage($app, $user, error: 'That page went stale. Try again.'), 400);
+    }
+
+    // Always the signed-in user. There is no target parameter, so there is
+    // nothing to post somebody else's id into: a preference is his to state
+    // and nobody else's to state for him.
+    $result = officerPeople($app)->setPreferred($user, $user->id, $request->inputList('skills'));
+
+    if (!$result['ok']) {
+        return Response::html(preferredSkillsPage($app, $user, error: $result['error']), 422);
+    }
+
+    return Response::redirect($app->url('tools/skills?saved=1'));
+});
+
 // ---------------------------------------------------------------------------
 // Check In / Out (spec 6.4)
 // ---------------------------------------------------------------------------
@@ -1488,6 +1529,40 @@ function setupSetPin(App $app, Request $request): Response
  * resolves its own user and re-checks team scope, and every POST checks CSRF.
  */
 require __DIR__ . '/routes-officer.php';
+
+/**
+ * The Tools screen where a committeeman says what he would rather do (7.3).
+ *
+ * Only position skills are offered. Forklift and Golf Cart correspond to no
+ * position, so preferring one would mean nothing (7.1).
+ */
+function preferredSkillsPage(
+    App $app,
+    Resm\Auth\Identity $user,
+    ?string $error = null,
+    ?string $notice = null,
+): string {
+    $rows = $app->db()->all(
+        "SELECT s.code, s.label,
+                (SELECT us.is_preferred FROM user_skill us
+                  WHERE us.user_id = :pref_user AND us.skill_id = s.id) AS is_preferred,
+                (SELECT us.granted_at FROM user_skill us
+                  WHERE us.user_id = :cert_user AND us.skill_id = s.id) AS granted_at
+           FROM skill s
+          WHERE s.kind = 'position'
+          ORDER BY s.sort_order",
+        ['pref_user' => $user->id, 'cert_user' => $user->id]
+    );
+
+    return (new View($app))->render('preferred-skills', [
+        'title' => 'Preferred Skills',
+        'user' => $user,
+        'skills' => $rows,
+        'error' => $error,
+        'notice' => $notice,
+        'back' => ['url' => $app->url('tools'), 'label' => 'Tools'],
+    ]);
+}
 
 function notFoundResponse(App $app): Response
 {
