@@ -43,7 +43,7 @@ $router->get('officer', static function (App $app, Request $request): Response {
         return $ctx;
     }
 
-    return Response::html((new View($app))->render('officer/index', $ctx + [
+    return Response::html((new View($app))->render('officer/index', array_merge($ctx, [
         'title' => 'Officer Menu',
         'tiles' => OfficerMenu::tilesFor(
             $app,
@@ -52,7 +52,7 @@ $router->get('officer', static function (App $app, Request $request): Response {
             $ctx['shift'] === null ? null : (int) $ctx['shift']['id'],
         ),
         'back' => ['url' => $app->url(''), 'label' => 'Main Menu'],
-    ]));
+    ])));
 });
 
 // ---------------------------------------------------------------------------
@@ -83,11 +83,11 @@ $router->post('officer/phase', static function (App $app, Request $request): Res
     // is a page rather than a dialog: it survives a reload, and it works with
     // no JavaScript at all.
     if ($result['confirm']) {
-        return Response::html((new View($app))->render('officer/phase-confirm', $ctx + [
+        return Response::html((new View($app))->render('officer/phase-confirm', array_merge($ctx, [
             'title' => 'Switch back to Unload?',
             'target' => $wanted,
             'back' => officerBack($app, $ctx),
-        ]));
+        ])));
     }
 
     if (!$result['ok']) {
@@ -175,12 +175,21 @@ $router->post('officer/assign/{phase}', static function (App $app, Request $requ
     }
 
     // Redirect after posting, so a reload on the tarmac does not re-assign.
-    $extra = 'placed=1';
+    $vacated = (string) $request->input('action', '') === 'vacate';
+    $extra = 'done=' . ($vacated ? 'vacated' : 'placed');
     if ($result['carried']) {
         $extra .= '&carried=1';
     }
     if (($request->input('mode') ?? '') !== '') {
         $extra .= '&mode=' . rawurlencode((string) $request->input('mode'));
+    }
+
+    // Taking a man off leaves the spot empty, and the officer almost always
+    // wants to put somebody else on it -- so come back to the same sheet with
+    // the eligible list already open, rather than to the board with the
+    // position to find again. Two taps to refill, the same as to fill.
+    if ($vacated) {
+        $extra .= '&position=' . $positionId;
     }
 
     return Response::redirect(officerUrl($app, $ctx, 'officer/assign/' . $phase, $extra));
@@ -293,13 +302,13 @@ $router->get('officer/board/{phase}', static function (App $app, Request $reques
     $ctx = officerWithPhase($app, $ctx, $phase);
     $groups = officerBoard($app)->groups((int) $ctx['shift']['id'], $phase);
 
-    return Response::html((new View($app))->render('officer/board', $ctx + [
+    return Response::html((new View($app))->render('officer/board', array_merge($ctx, [
         'title' => 'View ' . PhaseControl::label($phase),
         'groups' => $groups,
         'error' => null,
         'notice' => null,
         'back' => officerBack($app, $ctx),
-    ]));
+    ])));
 });
 
 $router->get('officer/copy', static function (App $app, Request $request): Response {
@@ -448,7 +457,7 @@ function copyPage(App $app, array $ctx, Request $request, ?string $error = null)
         }
     }
 
-    return (new View($app))->render('officer/copy', $ctx + [
+    return (new View($app))->render('officer/copy', array_merge($ctx, [
         'title' => 'Copy From Previous Shift',
         'sources' => $sources,
         'source' => $source,
@@ -457,7 +466,7 @@ function copyPage(App $app, array $ctx, Request $request, ?string $error = null)
         'error' => $error,
         'notice' => null,
         'back' => officerBack($app, $ctx),
-    ]);
+    ]));
 }
 
 /** @param array<string, mixed> $ctx */
@@ -465,14 +474,14 @@ function broadcastPage(App $app, array $ctx, ?string $error = null, ?string $not
 {
     $shiftId = (int) $ctx['shift']['id'];
 
-    return (new View($app))->render('officer/broadcast', $ctx + [
+    return (new View($app))->render('officer/broadcast', array_merge($ctx, [
         'title' => 'Broadcast Message',
         'live' => attendance($app)->broadcast($shiftId),
         'history' => officerBroadcasts($app)->history($shiftId),
         'error' => $error,
         'notice' => $notice,
         'back' => officerBack($app, $ctx),
-    ]);
+    ]));
 }
 
 function officerPeople(App $app): Resm\Officer\People
@@ -523,7 +532,7 @@ function rosterPage(
         $notice = 'Saved.';
     }
 
-    return (new View($app))->render('officer/' . (in_array($screen, ['roster', 'pins', 'lunch'], true) ? $screen : 'people'), $ctx + [
+    return (new View($app))->render('officer/' . (in_array($screen, ['roster', 'pins', 'lunch'], true) ? $screen : 'people'), array_merge($ctx, [
         'title' => OfficerMenu::SECTIONS[$screen]['label'],
         'screen' => $screen,
         'people' => $filtered,
@@ -537,7 +546,7 @@ function rosterPage(
         'error' => $error,
         'notice' => $notice,
         'back' => officerBack($app, $ctx),
-    ]);
+    ]));
 }
 
 /**
@@ -691,7 +700,7 @@ function officerSkillSheet(
         $held[$skill['code']] = true;
     }
 
-    return Response::html((new View($app))->render('officer/skills', $ctx + [
+    return Response::html((new View($app))->render('officer/skills', array_merge($ctx, [
         'title' => $person['list_name'],
         'person' => $person,
         'allSkills' => $app->db()->all('SELECT code, label, kind FROM skill ORDER BY sort_order'),
@@ -699,7 +708,7 @@ function officerSkillSheet(
         'error' => $error,
         'notice' => null,
         'back' => ['url' => officerUrl($app, $ctx, 'officer/roster'), 'label' => 'View Roster'],
-    ]), $status);
+    ])), $status);
 }
 
 function officerAssignments(App $app): Resm\Officer\Assignments
@@ -762,14 +771,20 @@ function assignPage(App $app, array $ctx, Request $request, ?string $error = nul
     ];
     $available = $board->available($shiftId, $teamId, $seasonId, $phase, $filters);
 
-    $data = $ctx + [
+    $data = array_merge($ctx, [
         'title' => 'Assign ' . PhaseControl::label($phase),
         'error' => $error,
-        'notice' => $request->input('placed') === null
-            ? null
-            : ($request->input('carried') === null
+        'notice' => match ((string) $request->input('done', '')) {
+            'placed' => $request->input('carried') === null
                 ? 'Placed.'
-                : 'Placed, and carried into Bump and Run.'),
+                : 'Placed, and carried into Bump and Run.',
+            'vacated' => $request->input('carried') === null
+                ? 'Taken off. The spot is open.'
+                : 'Taken off, in both phases. The spot is open.',
+            default => $request->input('copied') === null
+                ? null
+                : ((int) $request->input('copied') . ' placed from the previous shift.'),
+        },
         'groups' => $groups,
         'criticalVacancies' => Resm\Officer\Board::criticalVacancies($groups),
         'available' => $available,
@@ -777,7 +792,7 @@ function assignPage(App $app, array $ctx, Request $request, ?string $error = nul
         'filters' => $filters,
         'mode' => (string) $request->input('mode') === 'roster' ? 'roster' : 'position',
         'back' => officerBack($app, $ctx),
-    ];
+    ]);
 
     // A tap on a position, or on a name: the second half of the two taps.
     $positionId = officerIntInput($request, 'position');
@@ -936,7 +951,7 @@ function officerBack(App $app, array $ctx): array
  */
 function officerFailure(App $app, array $ctx, string $message, int $status): Response
 {
-    return Response::html((new View($app))->render('officer/index', $ctx + [
+    return Response::html((new View($app))->render('officer/index', array_merge($ctx, [
         'title' => 'Officer Menu',
         'error' => $message,
         'tiles' => OfficerMenu::tilesFor(
@@ -946,7 +961,7 @@ function officerFailure(App $app, array $ctx, string $message, int $status): Res
             $ctx['shift'] === null ? null : (int) $ctx['shift']['id'],
         ),
         'back' => ['url' => $app->url(''), 'label' => 'Main Menu'],
-    ]), $status);
+    ])), $status);
 }
 
 function officerEmpty(App $app, string $heading, string $message): string

@@ -228,6 +228,11 @@ final class People
                 // One statement either way. INSERT ... ON DUPLICATE KEY UPDATE
                 // touches only this half of the row, so the other half — set by
                 // the other party — survives untouched.
+                //
+                // VALUES() rather than the row alias MySQL 8.0.20 prefers:
+                // MariaDB does not accept the alias form, and CI runs both
+                // engines because the database host on a reseller plan is not
+                // ours to control. The deprecation is a warning, not an error.
                 if ($certified) {
                     $db->execute(
                         'INSERT INTO user_skill (user_id, skill_id, granted_at, granted_by)

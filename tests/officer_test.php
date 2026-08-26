@@ -440,3 +440,59 @@ test('a phase that is not a phase is refused', function (): void {
         ));
     });
 });
+
+test('an officer on two teams gets the one he asked for', function (): void {
+    // The single-team case cannot tell a working match from a broken one:
+    // falling back to the first permitted team lands on the same answer. With
+    // two teams it can, which is why this exists alongside the test above.
+    inRollback(function (Database $db): void {
+        $f = officerFixture($db, 'off-two');
+        $officer = officerIdentity(Role::Officer, [$f['teamB'], $f['teamC']]);
+        $shifts = officerShiftFor($db);
+
+        $asked = $shifts->context(
+            $officer, $f['season'], Capability::AssignPositions, $f['teamC'], null,
+            utc('2027-03-06 12:00'),
+        );
+        assertSame($f['teamC'], (int) $asked['team']['id'], 'the team he named');
+
+        $other = $shifts->context(
+            $officer, $f['season'], Capability::AssignPositions, $f['teamB'], null,
+            utc('2027-03-06 12:00'),
+        );
+        assertSame($f['teamB'], (int) $other['team']['id'], 'and the other one when he names that');
+
+        // A team he is on neither of falls back rather than resolving.
+        $db->execute(
+            "INSERT INTO team (season_id, name, is_active) VALUES (:s, 'Team Z', 1)",
+            ['s' => $f['season']]
+        );
+        $foreign = $db->lastInsertId();
+
+        $refused = $shifts->context(
+            $officer, $f['season'], Capability::AssignPositions, $foreign, null,
+            utc('2027-03-06 12:00'),
+        );
+        assertTrue((int) $refused['team']['id'] !== $foreign, 'never the one he is not on');
+    });
+});
+
+test('the officer page builders merge their overrides rather than union them', function (): void {
+    // `$ctx + [...]` keeps the LEFT value for a duplicate key, and the officer
+    // context carries error and notice as null -- so a builder written that way
+    // silently discards every message it was asked to show. Nothing failed and
+    // nothing appeared: the 409 came back with the right status and a blank
+    // page. Only driving it over HTTP found it, so this is here to keep it
+    // found.
+    $source = (string) file_get_contents(__DIR__ . '/../app/routes-officer.php');
+
+    assertSame(
+        0,
+        substr_count($source, '$ctx + ['),
+        'use array_merge($ctx, [...]) so the later value wins'
+    );
+    assertTrue(
+        substr_count($source, 'array_merge($ctx, [') > 0,
+        'and the builders should still be assembling their data'
+    );
+});

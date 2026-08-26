@@ -108,10 +108,21 @@ test('a copy adds to a board and never overwrites one', function (): void {
         // Tonight the officer has already put somebody else there.
         officerPlace($db, $f['day'], $b, 'unload', 'Reed Starter 1');
 
-        $r = copyFor($db)->apply($actor, shiftRow($db, $f['day']), $f['night'], 'unload');
+        $service = copyFor($db);
+        $preview = $service->preview($f['night'], $f['day'], $f['teamB'], $f['season'], 'unload');
+        assertCount(1, $preview['blocked'], 'the preview says so before he confirms');
+        assertCount(0, $preview['apply']);
+
+        $r = $service->apply($actor, shiftRow($db, $f['day']), $f['night'], 'unload');
 
         assertSame(0, $r['applied']);
         assertTrue(holdsPosition($db, $f['day'], 'unload', $b, 'Reed Starter 1'), 'tonight’s man keeps it');
+        assertSame(1, (int) $db->value(
+            "SELECT COUNT(*) FROM assignment a JOIN position p ON p.id = a.position_id
+              WHERE a.shift_id = :s AND a.phase = 'unload' AND p.label = 'Reed Starter 1'
+                AND a.is_current = 1",
+            ['s' => $f['day']]
+        ), 'and one man is standing there, not two');
     });
 });
 
