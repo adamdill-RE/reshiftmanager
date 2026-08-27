@@ -72,15 +72,15 @@ Whoever holds that key can take the master admin account, so **remove the
 `setup_key` line once the app is running** — with no key configured the route
 does not exist, and that is the state to leave it in.
 
-The CLI scripts remain the better path wherever a shell is available.
+Migrations are **not** run automatically, and on this account the browser
+route is the only way to apply them. Check what is pending with
+`/resm/status?key=…`, which needs only the `status_key` that stays configured;
+then add `setup_key` back to `config.local.php` through cPanel File Manager,
+visit `/resm/setup?key=…`, apply, and remove the line again.
 
-Migrations are **not** run automatically. Over SSH or cPanel Terminal:
-
-```sh
-cd ~/resm-app
-php bin/migrate.php --status
-php bin/migrate.php
-```
+The CLI equivalents — `php bin/migrate.php --status` and `php bin/migrate.php`
+from `~/resm-app` — are the better path on any host that has a shell. This one
+does not, so they are for local development and for a future move.
 
 **The database is not on the web server.** Ahosting runs it separately, so
 `db.host` is the address cPanel shows under Remote MySQL — an IP rather than a
