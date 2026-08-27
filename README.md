@@ -258,15 +258,16 @@ The tarmac map arrived in August 2026 — first as a written description,
 then as the committee's sketch that fixed the compass — and it ships as a
 generated schematic: `bin/gen-tarmac-map.php` draws
 `public/assets/map/tarmac.svg` from that layout. North up, the tent runs
-north–south (which suits a phone held upright): guests enter through the
-Overheads / Tent Entrance lines at the north end and walk south to their
-stop, the seven numbered stops run Reed to Gold Badge / LT down the
-tent's length, the seven bus lanes run along the east side with the
-starters and Bus Callers in them and the computers/counters/runners
-between tent and lanes, the back gates sit outside the west wall, and the
-Bus Ops complex sits against the south end with the committee gate beyond
-it. Holly Hall (with Curve) and Naomi are call-outs beyond the drawing to
-the northeast and southeast. Every one of the 98 positions is one SVG
+north–south (which suits a phone held upright): the seven numbered stops
+run up the tent from the Bus Ops complex at the south end — Reed nearest
+the office, Gold Badge / LT at the top, the lone bathroom against the
+north end. Guests come in on the west side through the Overheads / Tent
+Entrance lines, line up in the outside queue areas along the west wall,
+and enter each stop through its back gates; the seven bus lanes run along
+the east side with the starters and Bus Callers in them and the
+computers/counters/runners between tent and lanes. The committee gate
+sits beyond the complex; Holly Hall (with Curve) and Naomi are call-outs
+beyond the drawing to the northeast and southeast. Every one of the 98 positions is one SVG
 element whose id equals that position's `map_ref` (migration 008), My
 Shift Status highlights the user's own spot with his group in a secondary
 colour, and `tests/map_test.php` pins the id contract from both sides. To
