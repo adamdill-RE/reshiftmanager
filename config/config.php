@@ -101,4 +101,14 @@ return [
         'foreground_seconds' => 10,
         'background_seconds' => 60,
     ],
+
+    'retention' => [
+        // Spec 11.5 #7, answered 27 August 2026: seasons stay live and
+        // queryable for five years before archival. This bounds what the audit
+        // log and the export range over — a QUERY window, never a delete.
+        // Nothing in the application removes rows because of it; anything
+        // older is a candidate for archival by a person who has decided to
+        // archive it.
+        'seasons_years' => 5,
+    ],
 ];
