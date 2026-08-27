@@ -12,25 +12,28 @@ declare(strict_types=1);
  *                                           migration 008 against this script,
  *                                           non-zero on drift
  *
- * The layout is transcribed from what Rodeo Express supplied in August 2026:
- * a tent roughly 800ft by 150ft, buses loading on the west side in seven
- * lanes, guests entering from the southeast and walking to their stop, the
- * stops running north to south as Reed, OST, Special Events & Woodlands,
- * West Loop, Monroe, Maxey — Reed and OST the largest. Back gates on the
- * east side inside the tent; computers, counters and runners just outside
- * the west side; starters in the bus lanes even with their stops; overheads
- * at the extreme southeast; the Bus Ops office, log cabin, bathrooms and
- * chuck wagon north of the tent with the committee gate on their north side;
- * a second bathroom south of the tent. Curve and Holly Hall lie beyond the
- * drawing to the southwest, Naomi and its walkover bridge beyond it to the
- * northwest — both drawn as call-out boxes so the men who work them still
- * see their own dot.
+ * The layout is transcribed from what Rodeo Express supplied in August 2026,
+ * with the committee's first round of corrections folded in: a tent roughly
+ * 800ft by 150ft, buses loading on the west side in seven lanes, guests
+ * entering from the southeast and walking to their stop, the stops running
+ * north to south as Reed, OST, Special Events & Woodlands, West Loop,
+ * Monroe, Maxey, and Gold Badge / LT at the tent's south end — Reed and OST
+ * the largest. Back gates just outside the east wall; computers, counters
+ * and runners just outside the west wall; starters in the bus lanes even
+ * with their stops; the Bus Callers in the lanes at Special Events;
+ * overheads at the extreme southeast; the Bus Ops office, log cabin,
+ * bathrooms and chuck wagon against the tent's north wall with the
+ * committee gate on their north side; a second bathroom against the south
+ * wall — the buildings touch the tent on purpose, as landmarks people
+ * orient by. Curve and Holly Hall lie beyond the drawing to the southwest,
+ * Naomi and its walkover bridge beyond it to the northwest — both drawn as
+ * call-out boxes so the men who work them still see their own dot.
  *
  * The drawing is a schematic, not a survey: the north-south axis is
- * stretched so six stop bands stay legible on a phone. Positions whose exact
- * spot was not described (GB/LT, Unload, the Bus Callers) are placed where
- * the description implies and are expected to move when the committee
- * corrects them — rerun this script and recommit; the ids never change.
+ * stretched so seven stop bands stay legible on a phone. The one placement
+ * still unconfirmed is the Unload cluster (drawn at the lanes' north end) —
+ * when the committee corrects it, rerun this script and recommit; the ids
+ * never change.
  *
  * THE CONTRACT (Resm\TarmacMap): every one of the 98 positions in spec 8.3
  * is exactly one element in the SVG whose id equals that position's map_ref.
@@ -124,21 +127,24 @@ foreach ($labels as $label) {
 const TENT = ['x0' => 260, 'y0' => 300, 'x1' => 1460, 'y1' => 630];
 const LANES = ['x0' => 90, 'y0' => 290, 'x1' => 218, 'y1' => 640, 'count' => 7];
 
-// The six stop bands, north to south, Reed and OST the largest.
+// The seven stop bands, north to south, Reed and OST the largest. Numbered
+// in the labels so the walking order from the entrance reads off the map.
 const BANDS = [
-    'reed'   => ['label' => 'Reed / Employee',            'y0' => 300, 'y1' => 377],
-    'ost'    => ['label' => 'OST',                        'y0' => 377, 'y1' => 447],
-    'sew'    => ['label' => 'Special Events & Woodlands', 'y0' => 447, 'y1' => 487],
-    'wl'     => ['label' => 'West Loop',                  'y0' => 487, 'y1' => 535],
-    'monroe' => ['label' => 'Monroe',                     'y0' => 535, 'y1' => 583],
-    'maxey'  => ['label' => 'Maxey',                      'y0' => 583, 'y1' => 630],
+    'reed'   => ['label' => '1 · Reed / Employee',            'y0' => 300, 'y1' => 370],
+    'ost'    => ['label' => '2 · OST',                        'y0' => 370, 'y1' => 432],
+    'sew'    => ['label' => '3 · Special Events & Woodlands', 'y0' => 432, 'y1' => 463],
+    'wl'     => ['label' => '4 · West Loop',                  'y0' => 463, 'y1' => 507],
+    'monroe' => ['label' => '5 · Monroe',                     'y0' => 507, 'y1' => 551],
+    'maxey'  => ['label' => '6 · Maxey',                      'y0' => 551, 'y1' => 590],
+    'gblt'   => ['label' => '7 · Gold Badge / LT',            'y0' => 590, 'y1' => 630],
 ];
 
 // Starters sit in the lanes, even with their stop; the support crew sits on
-// the west apron just outside the tent wall; back gates on the east side.
+// the west apron just outside the tent wall; back gates just outside the
+// east wall, per the committee's correction.
 const STARTER_X = [160, 195];
 const APRON_X = [230, 248];
-const GATE_X = 1442;
+const GATE_X = 1478;
 
 /** @var array<string, array{x: float, y: float}> */
 $dots = [];
@@ -162,12 +168,12 @@ function mid(string $band): float
     return (BANDS[$band]['y0'] + BANDS[$band]['y1']) / 2;
 }
 
-/** The west-apron grid for a band: two columns, rows every 16. */
+/** The west-apron grid for a band: two columns, rows every 14. */
 function apron(array &$dots, array $refs, string $band, array $labels): void
 {
-    $y0 = BANDS[$band]['y0'] + 8;
+    $y0 = BANDS[$band]['y0'] + 7;
     foreach ($labels as $i => $label) {
-        place($dots, $refs, $label, APRON_X[$i % 2], $y0 + intdiv($i, 2) * 16);
+        place($dots, $refs, $label, APRON_X[$i % 2], $y0 + intdiv($i, 2) * 14);
     }
 }
 
@@ -206,8 +212,12 @@ apron($dots, $refs, 'ost', [
 gates($dots, $refs, 'ost', ['OST Back Gate 1', 'OST Back Gate 2']);
 
 // --- Special Events & Woodlands -------------------------------------------
-place($dots, $refs, 'Woodlands Starter', STARTER_X[0], mid('sew'));
-place($dots, $refs, 'Special Events Starter', STARTER_X[1], mid('sew'));
+// The Bus Callers work here too, in the lanes west of the starters (the
+// committee's correction: "Bus Caller is located at Special Events").
+place($dots, $refs, 'Woodlands Starter', STARTER_X[0], mid('sew') - 6);
+place($dots, $refs, 'Special Events Starter', STARTER_X[1], mid('sew') - 6);
+place($dots, $refs, 'Bus Caller 1', 118, mid('sew') + 6);
+place($dots, $refs, 'Bus Caller 2', 141, mid('sew') + 6);
 place($dots, $refs, 'Woodlands Runner', APRON_X[0], mid('sew'));
 place($dots, $refs, 'Special Events Runner', APRON_X[1], mid('sew'));
 
@@ -227,12 +237,21 @@ apron($dots, $refs, 'monroe', [
 ]);
 gates($dots, $refs, 'monroe', ['Monroe Back Gate 1', 'Monroe Back Gate 2']);
 
-// --- Maxey (southmost) -----------------------------------------------------
+// --- Maxey -----------------------------------------------------------------
 place($dots, $refs, 'Maxey Starter', 178, mid('maxey'));
 apron($dots, $refs, 'maxey', [
     'Maxey Computer', 'Maxey Counter 1', 'Maxey Counter 2', 'Maxey Runner 1', 'Maxey Runner 2',
 ]);
 gates($dots, $refs, 'maxey', ['Maxey Back Gate']);
+
+// --- Gold Badge / LT (southmost, inside the tent south of Maxey) -----------
+place($dots, $refs, 'GB/LT Starter 1', STARTER_X[0], mid('gblt'));
+place($dots, $refs, 'GB/LT Starter 2', STARTER_X[1], mid('gblt'));
+apron($dots, $refs, 'gblt', [
+    'GB/LT Computer', 'GB/LT Counter 1', 'GB/LT Counter 2',
+    'GB/LT Runner 1', 'GB/LT Runner 2', 'GB/LT Runner 3',
+]);
+gates($dots, $refs, 'gblt', ['GB/LT Back of Tent']);
 
 // --- Tent Entrance / Overheads: the extreme southeast, where guests enter --
 foreach (['Tent Entrance/Overheads Lead', 'Tent Entrance/Overheads 2',
@@ -242,27 +261,13 @@ foreach (['Tent Entrance/Overheads Lead', 'Tent Entrance/Overheads 2',
 }
 
 // --- The committee gate, north of the Bus Ops office complex ---------------
-place($dots, $refs, 'Main Committee Gate Lead', 635, 130);
-place($dots, $refs, 'Main Committee Gate 2', 665, 130);
-
-// --- Bus Callers: at the lane entry, south end of the lanes (approximate) --
-place($dots, $refs, 'Bus Caller 1', 140, 655);
-place($dots, $refs, 'Bus Caller 2', 168, 655);
+place($dots, $refs, 'Main Committee Gate Lead', 635, 222);
+place($dots, $refs, 'Main Committee Gate 2', 665, 222);
 
 // --- Unload: the lanes' north end (approximate; unload is phase one) -------
 place($dots, $refs, 'Unload Starter', 140, 276);
 place($dots, $refs, 'Unload Helper/Crowd Control', 168, 276);
 place($dots, $refs, 'Unload Computer', 230, 276);
-
-// --- GB/LT: north of the tent's west end (location approximate) ------------
-foreach (['GB/LT Starter 1', 'GB/LT Starter 2', 'GB/LT Computer',
-          'GB/LT Counter 1', 'GB/LT Counter 2'] as $i => $label) {
-    place($dots, $refs, $label, 310 + $i * 24, 252);
-}
-foreach (['GB/LT Runner 1', 'GB/LT Runner 2', 'GB/LT Runner 3'] as $i => $label) {
-    place($dots, $refs, $label, 310 + $i * 24, 274);
-}
-place($dots, $refs, 'GB/LT Back of Tent', 380, 316);
 
 // --- Naomi: beyond the drawing to the northwest, drawn as a call-out -------
 place($dots, $refs, 'Center Starter', 108, 84);
@@ -391,12 +396,14 @@ function svg(array $dots, array $refs): string
         $l['y1'] + 18
     );
 
-    // North of the tent: the Bus Ops complex, committee gate on its north side.
+    // North of the tent: the Bus Ops complex, drawn TOUCHING the north wall —
+    // the committee wants the buildings as reference points people orient by.
+    // The committee gate sits on the complex's north side.
     $buildings = [
-        ['Bus Ops Office', 560, 170, 180, 60],
-        ['Log Cabin', 760, 170, 90, 60],
-        ['Bathrooms', 870, 170, 80, 60],
-        ['Chuck Wagon', 970, 170, 110, 60],
+        ['Bus Ops Office', 560, 240, 180, 60],
+        ['Log Cabin', 760, 240, 90, 60],
+        ['Bathrooms', 870, 240, 80, 60],
+        ['Chuck Wagon', 970, 240, 110, 60],
     ];
     foreach ($buildings as [$label, $x, $y, $w, $h]) {
         $out[] = sprintf('<rect class="tmap-bldg" x="%d" y="%d" width="%d" height="%d"/>', $x, $y, $w, $h);
@@ -407,20 +414,17 @@ function svg(array $dots, array $refs): string
             esc($label)
         );
     }
-    $out[] = '<path class="tmap-lane-line" d="M 560 150 L 1080 150"/>';
-    $out[] = '<text class="tmap-sublabel" x="700" y="112">Committee Gate</text>';
+    $out[] = '<path class="tmap-lane-line" d="M 560 232 L 1080 232"/>';
+    $out[] = '<text class="tmap-sublabel" x="700" y="208">Committee Gate</text>';
 
-    // South of the tent: the second bathroom.
-    $out[] = '<rect class="tmap-bldg" x="840" y="680" width="100" height="50"/>';
-    $out[] = '<text class="tmap-sublabel" x="890" y="709" text-anchor="middle">Bathroom</text>';
+    // South of the tent: the second bathroom, against the south wall.
+    $out[] = '<rect class="tmap-bldg" x="840" y="630" width="100" height="50"/>';
+    $out[] = '<text class="tmap-sublabel" x="890" y="659" text-anchor="middle">Bathroom</text>';
 
-    // GB/LT loading area, north of the tent's west end - placement approximate.
-    $out[] = '<rect class="tmap-off" x="290" y="232" width="210" height="60" rx="8"/>';
-    $out[] = '<text class="tmap-sublabel" x="295" y="226">GB / LT loading (approx.)</text>';
-
-    // Guests enter from the southeast and walk west to their stop.
+    // Guests enter from the southeast and walk west to their stop. The
+    // caption hangs off the arrow's tail, clear of the back-gate column.
     $out[] = sprintf(
-        '<path class="tmap-arrow" d="M 1600 590 L %d 590"/>',
+        '<path class="tmap-arrow" d="M 1690 590 L %d 590"/>',
         $t['x1'] + 14
     );
     $out[] = sprintf(
@@ -429,14 +433,14 @@ function svg(array $dots, array $refs): string
         $t['x1'] + 18,
         $t['x1'] + 18
     );
-    $out[] = '<text class="tmap-sublabel" x="1600" y="578" text-anchor="end">Guests enter (southeast)</text>';
+    $out[] = '<text class="tmap-sublabel" x="1690" y="577" text-anchor="end">Guests enter (southeast)</text>';
     $out[] = sprintf(
-        '<path class="tmap-walk" d="M %d 600 L %d 600"/>',
+        '<path class="tmap-walk" d="M %d 602 L %d 602"/>',
         $t['x1'] - 30,
         $t['x0'] + 60
     );
     $out[] = sprintf(
-        '<text class="tmap-sublabel" x="%d" y="592">guests walk west to their stop</text>',
+        '<text class="tmap-sublabel" x="%d" y="616">guests walk west to their stop</text>',
         $t['x0'] + 620
     );
 
@@ -450,9 +454,16 @@ function svg(array $dots, array $refs): string
     $out[] = '<text class="tmap-sublabel" x="82" y="744">Curve &#183; Holly Hall crosswalk &#8601; southwest of here</text>';
 
     // Cluster captions for the markers outside the bands.
-    $out[] = '<text class="tmap-sublabel" x="128" y="300" text-anchor="middle">Unload</text>';
-    $out[] = '<text class="tmap-sublabel" x="154" y="679" text-anchor="middle">Bus Callers</text>';
-    $out[] = '<text class="tmap-sublabel" x="1363" y="637" text-anchor="middle">Tent Entrance / Overheads</text>';
+    $out[] = '<text class="tmap-sublabel" x="128" y="266" text-anchor="middle">Unload</text>';
+    $out[] = sprintf(
+        '<text class="tmap-sublabel" x="130" y="%.0f" text-anchor="middle">Bus Callers</text>',
+        (BANDS['sew']['y0'] + BANDS['sew']['y1']) / 2 + 22
+    );
+    $out[] = '<text class="tmap-sublabel" x="1363" y="647" text-anchor="middle">Tent Entrance / Overheads</text>';
+    $out[] = sprintf(
+        '<text class="tmap-sublabel" x="%d" y="292" text-anchor="middle">Back gates (outside the east wall)</text>',
+        GATE_X
+    );
 
     // Every position: one addressable dot, its id the position's map_ref.
     foreach ($dots as $ref => $at) {

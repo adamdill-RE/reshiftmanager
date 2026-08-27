@@ -7,18 +7,20 @@
 <path class="tmap-arrowhead" d="M 1640 20 L 1633 34 L 1647 34 Z"/>
 <text class="tmap-label" x="1640" y="88" text-anchor="middle">N</text>
 <text class="tmap-sublabel" x="1655" y="810" text-anchor="end">Schematic - not to scale</text>
-<rect class="tmap-zone-a" x="260" y="300" width="1200" height="77"/>
-<text class="tmap-label" x="580" y="344">Reed / Employee</text>
-<rect class="tmap-zone-b" x="260" y="377" width="1200" height="70"/>
-<text class="tmap-label" x="580" y="417">OST</text>
-<rect class="tmap-zone-a" x="260" y="447" width="1200" height="40"/>
-<text class="tmap-label" x="580" y="472">Special Events &amp; Woodlands</text>
-<rect class="tmap-zone-b" x="260" y="487" width="1200" height="48"/>
-<text class="tmap-label" x="580" y="516">West Loop</text>
-<rect class="tmap-zone-a" x="260" y="535" width="1200" height="48"/>
-<text class="tmap-label" x="580" y="564">Monroe</text>
-<rect class="tmap-zone-b" x="260" y="583" width="1200" height="47"/>
-<text class="tmap-label" x="580" y="612">Maxey</text>
+<rect class="tmap-zone-a" x="260" y="300" width="1200" height="70"/>
+<text class="tmap-label" x="580" y="340">1 · Reed / Employee</text>
+<rect class="tmap-zone-b" x="260" y="370" width="1200" height="62"/>
+<text class="tmap-label" x="580" y="406">2 · OST</text>
+<rect class="tmap-zone-a" x="260" y="432" width="1200" height="31"/>
+<text class="tmap-label" x="580" y="452">3 · Special Events &amp; Woodlands</text>
+<rect class="tmap-zone-b" x="260" y="463" width="1200" height="44"/>
+<text class="tmap-label" x="580" y="490">4 · West Loop</text>
+<rect class="tmap-zone-a" x="260" y="507" width="1200" height="44"/>
+<text class="tmap-label" x="580" y="534">5 · Monroe</text>
+<rect class="tmap-zone-b" x="260" y="551" width="1200" height="39"/>
+<text class="tmap-label" x="580" y="576">6 · Maxey</text>
+<rect class="tmap-zone-a" x="260" y="590" width="1200" height="40"/>
+<text class="tmap-label" x="580" y="615">7 · Gold Badge / LT</text>
 <rect class="tmap-tent" x="260" y="300" width="1200" height="330"/>
 <text class="tmap-sublabel" x="268" y="292">Tent - about 800 ft by 150 ft</text>
 <rect class="tmap-lanes" x="90" y="290" width="128" height="350"/>
@@ -29,133 +31,152 @@
 <path class="tmap-lane-line" d="M 181.4 290 L 181.4 640"/>
 <path class="tmap-lane-line" d="M 199.7 290 L 199.7 640"/>
 <text class="tmap-sublabel" x="90" y="658">Bus lanes (7) - buses load on the west side</text>
-<rect class="tmap-bldg" x="560" y="170" width="180" height="60"/>
-<text class="tmap-sublabel" x="650" y="204" text-anchor="middle">Bus Ops Office</text>
-<rect class="tmap-bldg" x="760" y="170" width="90" height="60"/>
-<text class="tmap-sublabel" x="805" y="204" text-anchor="middle">Log Cabin</text>
-<rect class="tmap-bldg" x="870" y="170" width="80" height="60"/>
-<text class="tmap-sublabel" x="910" y="204" text-anchor="middle">Bathrooms</text>
-<rect class="tmap-bldg" x="970" y="170" width="110" height="60"/>
-<text class="tmap-sublabel" x="1025" y="204" text-anchor="middle">Chuck Wagon</text>
-<path class="tmap-lane-line" d="M 560 150 L 1080 150"/>
-<text class="tmap-sublabel" x="700" y="112">Committee Gate</text>
-<rect class="tmap-bldg" x="840" y="680" width="100" height="50"/>
-<text class="tmap-sublabel" x="890" y="709" text-anchor="middle">Bathroom</text>
-<rect class="tmap-off" x="290" y="232" width="210" height="60" rx="8"/>
-<text class="tmap-sublabel" x="295" y="226">GB / LT loading (approx.)</text>
-<path class="tmap-arrow" d="M 1600 590 L 1474 590"/>
+<rect class="tmap-bldg" x="560" y="240" width="180" height="60"/>
+<text class="tmap-sublabel" x="650" y="274" text-anchor="middle">Bus Ops Office</text>
+<rect class="tmap-bldg" x="760" y="240" width="90" height="60"/>
+<text class="tmap-sublabel" x="805" y="274" text-anchor="middle">Log Cabin</text>
+<rect class="tmap-bldg" x="870" y="240" width="80" height="60"/>
+<text class="tmap-sublabel" x="910" y="274" text-anchor="middle">Bathrooms</text>
+<rect class="tmap-bldg" x="970" y="240" width="110" height="60"/>
+<text class="tmap-sublabel" x="1025" y="274" text-anchor="middle">Chuck Wagon</text>
+<path class="tmap-lane-line" d="M 560 232 L 1080 232"/>
+<text class="tmap-sublabel" x="700" y="208">Committee Gate</text>
+<rect class="tmap-bldg" x="840" y="630" width="100" height="50"/>
+<text class="tmap-sublabel" x="890" y="659" text-anchor="middle">Bathroom</text>
+<path class="tmap-arrow" d="M 1690 590 L 1474 590"/>
 <path class="tmap-arrowhead" d="M 1464 590 L 1478 583 L 1478 597 Z"/>
-<text class="tmap-sublabel" x="1600" y="578" text-anchor="end">Guests enter (southeast)</text>
-<path class="tmap-walk" d="M 1430 600 L 320 600"/>
-<text class="tmap-sublabel" x="880" y="592">guests walk west to their stop</text>
+<text class="tmap-sublabel" x="1690" y="577" text-anchor="end">Guests enter (southeast)</text>
+<path class="tmap-walk" d="M 1430 602 L 320 602"/>
+<text class="tmap-sublabel" x="880" y="616">guests walk west to their stop</text>
 <rect class="tmap-off" x="70" y="40" width="330" height="104" rx="10"/>
 <text class="tmap-sublabel" x="82" y="62">Naomi crosswalk &amp; walkover bridge &#8598; northwest of here</text>
 <text class="tmap-sublabel" x="290" y="88">crosswalk</text>
 <text class="tmap-sublabel" x="290" y="120">bridge</text>
 <rect class="tmap-off" x="70" y="722" width="330" height="76" rx="10"/>
 <text class="tmap-sublabel" x="82" y="744">Curve &#183; Holly Hall crosswalk &#8601; southwest of here</text>
-<text class="tmap-sublabel" x="128" y="300" text-anchor="middle">Unload</text>
-<text class="tmap-sublabel" x="154" y="679" text-anchor="middle">Bus Callers</text>
-<text class="tmap-sublabel" x="1363" y="637" text-anchor="middle">Tent Entrance / Overheads</text>
-<circle id="pos-reed-starter-1" class="pos" cx="160.0" cy="338.5" r="6"><title>Reed Starter 1</title></circle>
-<text class="pos-num" x="160.0" y="341.1">1</text>
-<circle id="pos-reed-starter-2" class="pos" cx="195.0" cy="338.5" r="6"><title>Reed Starter 2</title></circle>
-<text class="pos-num" x="195.0" y="341.1">2</text>
-<circle id="pos-reed-computer" class="pos" cx="230.0" cy="308.0" r="6"><title>Reed Computer</title></circle>
-<circle id="pos-employee-computer" class="pos" cx="248.0" cy="308.0" r="6"><title>Employee Computer</title></circle>
-<text class="pos-num" x="248.0" y="310.6">E</text>
-<circle id="pos-reed-counter-1" class="pos" cx="230.0" cy="324.0" r="6"><title>Reed Counter 1</title></circle>
-<text class="pos-num" x="230.0" y="326.6">1</text>
-<circle id="pos-reed-counter-2" class="pos" cx="248.0" cy="324.0" r="6"><title>Reed Counter 2</title></circle>
-<text class="pos-num" x="248.0" y="326.6">2</text>
-<circle id="pos-employee-counter-1" class="pos" cx="230.0" cy="340.0" r="6"><title>Employee Counter 1</title></circle>
-<text class="pos-num" x="230.0" y="342.6">E1</text>
-<circle id="pos-employee-counter-2" class="pos" cx="248.0" cy="340.0" r="6"><title>Employee Counter 2</title></circle>
-<text class="pos-num" x="248.0" y="342.6">E2</text>
-<circle id="pos-reed-employee-runner-1" class="pos" cx="230.0" cy="356.0" r="6"><title>Reed/Employee Runner 1</title></circle>
-<text class="pos-num" x="230.0" y="358.6">1</text>
-<circle id="pos-reed-employee-runner-2" class="pos" cx="248.0" cy="356.0" r="6"><title>Reed/Employee Runner 2</title></circle>
-<text class="pos-num" x="248.0" y="358.6">2</text>
-<circle id="pos-reed-employee-runner-3" class="pos" cx="230.0" cy="372.0" r="6"><title>Reed/Employee Runner 3</title></circle>
-<text class="pos-num" x="230.0" y="374.6">3</text>
-<circle id="pos-reed-employee-runner-4" class="pos" cx="248.0" cy="372.0" r="6"><title>Reed/Employee Runner 4</title></circle>
-<text class="pos-num" x="248.0" y="374.6">4</text>
-<circle id="pos-reed-employee-back-gate-1" class="pos" cx="1442.0" cy="319.2" r="6"><title>Reed/Employee Back Gate 1</title></circle>
-<text class="pos-num" x="1442.0" y="321.9">1</text>
-<circle id="pos-reed-employee-back-gate-2" class="pos" cx="1442.0" cy="338.5" r="6"><title>Reed/Employee Back Gate 2</title></circle>
-<text class="pos-num" x="1442.0" y="341.1">2</text>
-<circle id="pos-reed-employee-back-gate-3" class="pos" cx="1442.0" cy="357.8" r="6"><title>Reed/Employee Back Gate 3</title></circle>
-<text class="pos-num" x="1442.0" y="360.4">3</text>
-<circle id="pos-ost-starter-1" class="pos" cx="160.0" cy="412.0" r="6"><title>OST Starter 1</title></circle>
-<text class="pos-num" x="160.0" y="414.6">1</text>
-<circle id="pos-ost-starter-2" class="pos" cx="195.0" cy="412.0" r="6"><title>OST Starter 2</title></circle>
-<text class="pos-num" x="195.0" y="414.6">2</text>
-<circle id="pos-ost-computer" class="pos" cx="230.0" cy="385.0" r="6"><title>OST Computer</title></circle>
-<circle id="pos-ost-counter-1" class="pos" cx="248.0" cy="385.0" r="6"><title>OST Counter 1</title></circle>
-<text class="pos-num" x="248.0" y="387.6">1</text>
-<circle id="pos-ost-counter-2" class="pos" cx="230.0" cy="401.0" r="6"><title>OST Counter 2</title></circle>
-<text class="pos-num" x="230.0" y="403.6">2</text>
-<circle id="pos-ost-runner-1" class="pos" cx="248.0" cy="401.0" r="6"><title>OST Runner 1</title></circle>
-<text class="pos-num" x="248.0" y="403.6">1</text>
-<circle id="pos-ost-runner-2" class="pos" cx="230.0" cy="417.0" r="6"><title>OST Runner 2</title></circle>
-<text class="pos-num" x="230.0" y="419.6">2</text>
-<circle id="pos-ost-runner-3" class="pos" cx="248.0" cy="417.0" r="6"><title>OST Runner 3</title></circle>
-<text class="pos-num" x="248.0" y="419.6">3</text>
-<circle id="pos-ost-runner-4" class="pos" cx="230.0" cy="433.0" r="6"><title>OST Runner 4</title></circle>
-<text class="pos-num" x="230.0" y="435.6">4</text>
-<circle id="pos-ost-back-gate-1" class="pos" cx="1442.0" cy="400.3" r="6"><title>OST Back Gate 1</title></circle>
-<text class="pos-num" x="1442.0" y="402.9">1</text>
-<circle id="pos-ost-back-gate-2" class="pos" cx="1442.0" cy="423.7" r="6"><title>OST Back Gate 2</title></circle>
-<text class="pos-num" x="1442.0" y="426.3">2</text>
-<circle id="pos-woodlands-starter" class="pos" cx="160.0" cy="467.0" r="6"><title>Woodlands Starter</title></circle>
-<circle id="pos-special-events-starter" class="pos" cx="195.0" cy="467.0" r="6"><title>Special Events Starter</title></circle>
-<circle id="pos-woodlands-runner" class="pos" cx="230.0" cy="467.0" r="6"><title>Woodlands Runner</title></circle>
-<circle id="pos-special-events-runner" class="pos" cx="248.0" cy="467.0" r="6"><title>Special Events Runner</title></circle>
-<circle id="pos-wl-starter-1" class="pos" cx="160.0" cy="511.0" r="6"><title>WL Starter 1</title></circle>
-<text class="pos-num" x="160.0" y="513.6">1</text>
-<circle id="pos-wl-starter-2" class="pos" cx="195.0" cy="511.0" r="6"><title>WL Starter 2</title></circle>
-<text class="pos-num" x="195.0" y="513.6">2</text>
-<circle id="pos-wl-computer" class="pos" cx="230.0" cy="495.0" r="6"><title>WL Computer</title></circle>
-<circle id="pos-wl-counter-1" class="pos" cx="248.0" cy="495.0" r="6"><title>WL Counter 1</title></circle>
-<text class="pos-num" x="248.0" y="497.6">1</text>
-<circle id="pos-wl-counter-2" class="pos" cx="230.0" cy="511.0" r="6"><title>WL Counter 2</title></circle>
-<text class="pos-num" x="230.0" y="513.6">2</text>
-<circle id="pos-wl-runner-1" class="pos" cx="248.0" cy="511.0" r="6"><title>WL Runner 1</title></circle>
-<text class="pos-num" x="248.0" y="513.6">1</text>
-<circle id="pos-wl-runner-2" class="pos" cx="230.0" cy="527.0" r="6"><title>WL Runner 2</title></circle>
-<text class="pos-num" x="230.0" y="529.6">2</text>
-<circle id="pos-wl-back-gate-1" class="pos" cx="1442.0" cy="503.0" r="6"><title>WL Back Gate 1</title></circle>
-<text class="pos-num" x="1442.0" y="505.6">1</text>
-<circle id="pos-wl-back-gate-2" class="pos" cx="1442.0" cy="519.0" r="6"><title>WL Back Gate 2</title></circle>
-<text class="pos-num" x="1442.0" y="521.6">2</text>
-<circle id="pos-monroe-starter-1" class="pos" cx="160.0" cy="559.0" r="6"><title>Monroe Starter 1</title></circle>
-<text class="pos-num" x="160.0" y="561.6">1</text>
-<circle id="pos-monroe-starter-2" class="pos" cx="195.0" cy="559.0" r="6"><title>Monroe Starter 2</title></circle>
-<text class="pos-num" x="195.0" y="561.6">2</text>
-<circle id="pos-monroe-computer" class="pos" cx="230.0" cy="543.0" r="6"><title>Monroe Computer</title></circle>
-<circle id="pos-monroe-counter-1" class="pos" cx="248.0" cy="543.0" r="6"><title>Monroe Counter 1</title></circle>
-<text class="pos-num" x="248.0" y="545.6">1</text>
-<circle id="pos-monroe-counter-2" class="pos" cx="230.0" cy="559.0" r="6"><title>Monroe Counter 2</title></circle>
-<text class="pos-num" x="230.0" y="561.6">2</text>
-<circle id="pos-monroe-runner-1" class="pos" cx="248.0" cy="559.0" r="6"><title>Monroe Runner 1</title></circle>
-<text class="pos-num" x="248.0" y="561.6">1</text>
-<circle id="pos-monroe-runner-2" class="pos" cx="230.0" cy="575.0" r="6"><title>Monroe Runner 2</title></circle>
-<text class="pos-num" x="230.0" y="577.6">2</text>
-<circle id="pos-monroe-back-gate-1" class="pos" cx="1442.0" cy="551.0" r="6"><title>Monroe Back Gate 1</title></circle>
-<text class="pos-num" x="1442.0" y="553.6">1</text>
-<circle id="pos-monroe-back-gate-2" class="pos" cx="1442.0" cy="567.0" r="6"><title>Monroe Back Gate 2</title></circle>
-<text class="pos-num" x="1442.0" y="569.6">2</text>
-<circle id="pos-maxey-starter" class="pos" cx="178.0" cy="606.5" r="6"><title>Maxey Starter</title></circle>
-<circle id="pos-maxey-computer" class="pos" cx="230.0" cy="591.0" r="6"><title>Maxey Computer</title></circle>
-<circle id="pos-maxey-counter-1" class="pos" cx="248.0" cy="591.0" r="6"><title>Maxey Counter 1</title></circle>
-<text class="pos-num" x="248.0" y="593.6">1</text>
-<circle id="pos-maxey-counter-2" class="pos" cx="230.0" cy="607.0" r="6"><title>Maxey Counter 2</title></circle>
-<text class="pos-num" x="230.0" y="609.6">2</text>
-<circle id="pos-maxey-runner-1" class="pos" cx="248.0" cy="607.0" r="6"><title>Maxey Runner 1</title></circle>
-<text class="pos-num" x="248.0" y="609.6">1</text>
-<circle id="pos-maxey-runner-2" class="pos" cx="230.0" cy="623.0" r="6"><title>Maxey Runner 2</title></circle>
-<text class="pos-num" x="230.0" y="625.6">2</text>
-<circle id="pos-maxey-back-gate" class="pos" cx="1442.0" cy="606.5" r="6"><title>Maxey Back Gate</title></circle>
+<text class="tmap-sublabel" x="128" y="266" text-anchor="middle">Unload</text>
+<text class="tmap-sublabel" x="130" y="470" text-anchor="middle">Bus Callers</text>
+<text class="tmap-sublabel" x="1363" y="647" text-anchor="middle">Tent Entrance / Overheads</text>
+<text class="tmap-sublabel" x="1478" y="292" text-anchor="middle">Back gates (outside the east wall)</text>
+<circle id="pos-reed-starter-1" class="pos" cx="160.0" cy="335.0" r="6"><title>Reed Starter 1</title></circle>
+<text class="pos-num" x="160.0" y="337.6">1</text>
+<circle id="pos-reed-starter-2" class="pos" cx="195.0" cy="335.0" r="6"><title>Reed Starter 2</title></circle>
+<text class="pos-num" x="195.0" y="337.6">2</text>
+<circle id="pos-reed-computer" class="pos" cx="230.0" cy="307.0" r="6"><title>Reed Computer</title></circle>
+<circle id="pos-employee-computer" class="pos" cx="248.0" cy="307.0" r="6"><title>Employee Computer</title></circle>
+<text class="pos-num" x="248.0" y="309.6">E</text>
+<circle id="pos-reed-counter-1" class="pos" cx="230.0" cy="321.0" r="6"><title>Reed Counter 1</title></circle>
+<text class="pos-num" x="230.0" y="323.6">1</text>
+<circle id="pos-reed-counter-2" class="pos" cx="248.0" cy="321.0" r="6"><title>Reed Counter 2</title></circle>
+<text class="pos-num" x="248.0" y="323.6">2</text>
+<circle id="pos-employee-counter-1" class="pos" cx="230.0" cy="335.0" r="6"><title>Employee Counter 1</title></circle>
+<text class="pos-num" x="230.0" y="337.6">E1</text>
+<circle id="pos-employee-counter-2" class="pos" cx="248.0" cy="335.0" r="6"><title>Employee Counter 2</title></circle>
+<text class="pos-num" x="248.0" y="337.6">E2</text>
+<circle id="pos-reed-employee-runner-1" class="pos" cx="230.0" cy="349.0" r="6"><title>Reed/Employee Runner 1</title></circle>
+<text class="pos-num" x="230.0" y="351.6">1</text>
+<circle id="pos-reed-employee-runner-2" class="pos" cx="248.0" cy="349.0" r="6"><title>Reed/Employee Runner 2</title></circle>
+<text class="pos-num" x="248.0" y="351.6">2</text>
+<circle id="pos-reed-employee-runner-3" class="pos" cx="230.0" cy="363.0" r="6"><title>Reed/Employee Runner 3</title></circle>
+<text class="pos-num" x="230.0" y="365.6">3</text>
+<circle id="pos-reed-employee-runner-4" class="pos" cx="248.0" cy="363.0" r="6"><title>Reed/Employee Runner 4</title></circle>
+<text class="pos-num" x="248.0" y="365.6">4</text>
+<circle id="pos-reed-employee-back-gate-1" class="pos" cx="1478.0" cy="317.5" r="6"><title>Reed/Employee Back Gate 1</title></circle>
+<text class="pos-num" x="1478.0" y="320.1">1</text>
+<circle id="pos-reed-employee-back-gate-2" class="pos" cx="1478.0" cy="335.0" r="6"><title>Reed/Employee Back Gate 2</title></circle>
+<text class="pos-num" x="1478.0" y="337.6">2</text>
+<circle id="pos-reed-employee-back-gate-3" class="pos" cx="1478.0" cy="352.5" r="6"><title>Reed/Employee Back Gate 3</title></circle>
+<text class="pos-num" x="1478.0" y="355.1">3</text>
+<circle id="pos-ost-starter-1" class="pos" cx="160.0" cy="401.0" r="6"><title>OST Starter 1</title></circle>
+<text class="pos-num" x="160.0" y="403.6">1</text>
+<circle id="pos-ost-starter-2" class="pos" cx="195.0" cy="401.0" r="6"><title>OST Starter 2</title></circle>
+<text class="pos-num" x="195.0" y="403.6">2</text>
+<circle id="pos-ost-computer" class="pos" cx="230.0" cy="377.0" r="6"><title>OST Computer</title></circle>
+<circle id="pos-ost-counter-1" class="pos" cx="248.0" cy="377.0" r="6"><title>OST Counter 1</title></circle>
+<text class="pos-num" x="248.0" y="379.6">1</text>
+<circle id="pos-ost-counter-2" class="pos" cx="230.0" cy="391.0" r="6"><title>OST Counter 2</title></circle>
+<text class="pos-num" x="230.0" y="393.6">2</text>
+<circle id="pos-ost-runner-1" class="pos" cx="248.0" cy="391.0" r="6"><title>OST Runner 1</title></circle>
+<text class="pos-num" x="248.0" y="393.6">1</text>
+<circle id="pos-ost-runner-2" class="pos" cx="230.0" cy="405.0" r="6"><title>OST Runner 2</title></circle>
+<text class="pos-num" x="230.0" y="407.6">2</text>
+<circle id="pos-ost-runner-3" class="pos" cx="248.0" cy="405.0" r="6"><title>OST Runner 3</title></circle>
+<text class="pos-num" x="248.0" y="407.6">3</text>
+<circle id="pos-ost-runner-4" class="pos" cx="230.0" cy="419.0" r="6"><title>OST Runner 4</title></circle>
+<text class="pos-num" x="230.0" y="421.6">4</text>
+<circle id="pos-ost-back-gate-1" class="pos" cx="1478.0" cy="390.7" r="6"><title>OST Back Gate 1</title></circle>
+<text class="pos-num" x="1478.0" y="393.3">1</text>
+<circle id="pos-ost-back-gate-2" class="pos" cx="1478.0" cy="411.3" r="6"><title>OST Back Gate 2</title></circle>
+<text class="pos-num" x="1478.0" y="413.9">2</text>
+<circle id="pos-woodlands-starter" class="pos" cx="160.0" cy="441.5" r="6"><title>Woodlands Starter</title></circle>
+<circle id="pos-special-events-starter" class="pos" cx="195.0" cy="441.5" r="6"><title>Special Events Starter</title></circle>
+<circle id="pos-bus-caller-1" class="pos" cx="118.0" cy="453.5" r="6"><title>Bus Caller 1</title></circle>
+<text class="pos-num" x="118.0" y="456.1">1</text>
+<circle id="pos-bus-caller-2" class="pos" cx="141.0" cy="453.5" r="6"><title>Bus Caller 2</title></circle>
+<text class="pos-num" x="141.0" y="456.1">2</text>
+<circle id="pos-woodlands-runner" class="pos" cx="230.0" cy="447.5" r="6"><title>Woodlands Runner</title></circle>
+<circle id="pos-special-events-runner" class="pos" cx="248.0" cy="447.5" r="6"><title>Special Events Runner</title></circle>
+<circle id="pos-wl-starter-1" class="pos" cx="160.0" cy="485.0" r="6"><title>WL Starter 1</title></circle>
+<text class="pos-num" x="160.0" y="487.6">1</text>
+<circle id="pos-wl-starter-2" class="pos" cx="195.0" cy="485.0" r="6"><title>WL Starter 2</title></circle>
+<text class="pos-num" x="195.0" y="487.6">2</text>
+<circle id="pos-wl-computer" class="pos" cx="230.0" cy="470.0" r="6"><title>WL Computer</title></circle>
+<circle id="pos-wl-counter-1" class="pos" cx="248.0" cy="470.0" r="6"><title>WL Counter 1</title></circle>
+<text class="pos-num" x="248.0" y="472.6">1</text>
+<circle id="pos-wl-counter-2" class="pos" cx="230.0" cy="484.0" r="6"><title>WL Counter 2</title></circle>
+<text class="pos-num" x="230.0" y="486.6">2</text>
+<circle id="pos-wl-runner-1" class="pos" cx="248.0" cy="484.0" r="6"><title>WL Runner 1</title></circle>
+<text class="pos-num" x="248.0" y="486.6">1</text>
+<circle id="pos-wl-runner-2" class="pos" cx="230.0" cy="498.0" r="6"><title>WL Runner 2</title></circle>
+<text class="pos-num" x="230.0" y="500.6">2</text>
+<circle id="pos-wl-back-gate-1" class="pos" cx="1478.0" cy="477.7" r="6"><title>WL Back Gate 1</title></circle>
+<text class="pos-num" x="1478.0" y="480.3">1</text>
+<circle id="pos-wl-back-gate-2" class="pos" cx="1478.0" cy="492.3" r="6"><title>WL Back Gate 2</title></circle>
+<text class="pos-num" x="1478.0" y="494.9">2</text>
+<circle id="pos-monroe-starter-1" class="pos" cx="160.0" cy="529.0" r="6"><title>Monroe Starter 1</title></circle>
+<text class="pos-num" x="160.0" y="531.6">1</text>
+<circle id="pos-monroe-starter-2" class="pos" cx="195.0" cy="529.0" r="6"><title>Monroe Starter 2</title></circle>
+<text class="pos-num" x="195.0" y="531.6">2</text>
+<circle id="pos-monroe-computer" class="pos" cx="230.0" cy="514.0" r="6"><title>Monroe Computer</title></circle>
+<circle id="pos-monroe-counter-1" class="pos" cx="248.0" cy="514.0" r="6"><title>Monroe Counter 1</title></circle>
+<text class="pos-num" x="248.0" y="516.6">1</text>
+<circle id="pos-monroe-counter-2" class="pos" cx="230.0" cy="528.0" r="6"><title>Monroe Counter 2</title></circle>
+<text class="pos-num" x="230.0" y="530.6">2</text>
+<circle id="pos-monroe-runner-1" class="pos" cx="248.0" cy="528.0" r="6"><title>Monroe Runner 1</title></circle>
+<text class="pos-num" x="248.0" y="530.6">1</text>
+<circle id="pos-monroe-runner-2" class="pos" cx="230.0" cy="542.0" r="6"><title>Monroe Runner 2</title></circle>
+<text class="pos-num" x="230.0" y="544.6">2</text>
+<circle id="pos-monroe-back-gate-1" class="pos" cx="1478.0" cy="521.7" r="6"><title>Monroe Back Gate 1</title></circle>
+<text class="pos-num" x="1478.0" y="524.3">1</text>
+<circle id="pos-monroe-back-gate-2" class="pos" cx="1478.0" cy="536.3" r="6"><title>Monroe Back Gate 2</title></circle>
+<text class="pos-num" x="1478.0" y="538.9">2</text>
+<circle id="pos-maxey-starter" class="pos" cx="178.0" cy="570.5" r="6"><title>Maxey Starter</title></circle>
+<circle id="pos-maxey-computer" class="pos" cx="230.0" cy="558.0" r="6"><title>Maxey Computer</title></circle>
+<circle id="pos-maxey-counter-1" class="pos" cx="248.0" cy="558.0" r="6"><title>Maxey Counter 1</title></circle>
+<text class="pos-num" x="248.0" y="560.6">1</text>
+<circle id="pos-maxey-counter-2" class="pos" cx="230.0" cy="572.0" r="6"><title>Maxey Counter 2</title></circle>
+<text class="pos-num" x="230.0" y="574.6">2</text>
+<circle id="pos-maxey-runner-1" class="pos" cx="248.0" cy="572.0" r="6"><title>Maxey Runner 1</title></circle>
+<text class="pos-num" x="248.0" y="574.6">1</text>
+<circle id="pos-maxey-runner-2" class="pos" cx="230.0" cy="586.0" r="6"><title>Maxey Runner 2</title></circle>
+<text class="pos-num" x="230.0" y="588.6">2</text>
+<circle id="pos-maxey-back-gate" class="pos" cx="1478.0" cy="570.5" r="6"><title>Maxey Back Gate</title></circle>
+<circle id="pos-gb-lt-starter-1" class="pos" cx="160.0" cy="610.0" r="6"><title>GB/LT Starter 1</title></circle>
+<text class="pos-num" x="160.0" y="612.6">1</text>
+<circle id="pos-gb-lt-starter-2" class="pos" cx="195.0" cy="610.0" r="6"><title>GB/LT Starter 2</title></circle>
+<text class="pos-num" x="195.0" y="612.6">2</text>
+<circle id="pos-gb-lt-computer" class="pos" cx="230.0" cy="597.0" r="6"><title>GB/LT Computer</title></circle>
+<circle id="pos-gb-lt-counter-1" class="pos" cx="248.0" cy="597.0" r="6"><title>GB/LT Counter 1</title></circle>
+<text class="pos-num" x="248.0" y="599.6">1</text>
+<circle id="pos-gb-lt-counter-2" class="pos" cx="230.0" cy="611.0" r="6"><title>GB/LT Counter 2</title></circle>
+<text class="pos-num" x="230.0" y="613.6">2</text>
+<circle id="pos-gb-lt-runner-1" class="pos" cx="248.0" cy="611.0" r="6"><title>GB/LT Runner 1</title></circle>
+<text class="pos-num" x="248.0" y="613.6">1</text>
+<circle id="pos-gb-lt-runner-2" class="pos" cx="230.0" cy="625.0" r="6"><title>GB/LT Runner 2</title></circle>
+<text class="pos-num" x="230.0" y="627.6">2</text>
+<circle id="pos-gb-lt-runner-3" class="pos" cx="248.0" cy="625.0" r="6"><title>GB/LT Runner 3</title></circle>
+<text class="pos-num" x="248.0" y="627.6">3</text>
+<circle id="pos-gb-lt-back-of-tent" class="pos" cx="1478.0" cy="610.0" r="6"><title>GB/LT Back of Tent</title></circle>
 <circle id="pos-tent-entrance-overheads-lead" class="pos" cx="1285.0" cy="612.0" r="6"><title>Tent Entrance/Overheads Lead</title></circle>
 <circle id="pos-tent-entrance-overheads-2" class="pos" cx="1311.0" cy="612.0" r="6"><title>Tent Entrance/Overheads 2</title></circle>
 <text class="pos-num" x="1311.0" y="614.6">2</text>
@@ -167,32 +188,12 @@
 <text class="pos-num" x="1389.0" y="614.6">5</text>
 <circle id="pos-tent-entrance-overheads-6" class="pos" cx="1415.0" cy="612.0" r="6"><title>Tent Entrance/Overheads 6</title></circle>
 <text class="pos-num" x="1415.0" y="614.6">6</text>
-<circle id="pos-main-committee-gate-lead" class="pos" cx="635.0" cy="130.0" r="6"><title>Main Committee Gate Lead</title></circle>
-<circle id="pos-main-committee-gate-2" class="pos" cx="665.0" cy="130.0" r="6"><title>Main Committee Gate 2</title></circle>
-<text class="pos-num" x="665.0" y="132.6">2</text>
-<circle id="pos-bus-caller-1" class="pos" cx="140.0" cy="655.0" r="6"><title>Bus Caller 1</title></circle>
-<text class="pos-num" x="140.0" y="657.6">1</text>
-<circle id="pos-bus-caller-2" class="pos" cx="168.0" cy="655.0" r="6"><title>Bus Caller 2</title></circle>
-<text class="pos-num" x="168.0" y="657.6">2</text>
+<circle id="pos-main-committee-gate-lead" class="pos" cx="635.0" cy="222.0" r="6"><title>Main Committee Gate Lead</title></circle>
+<circle id="pos-main-committee-gate-2" class="pos" cx="665.0" cy="222.0" r="6"><title>Main Committee Gate 2</title></circle>
+<text class="pos-num" x="665.0" y="224.6">2</text>
 <circle id="pos-unload-starter" class="pos" cx="140.0" cy="276.0" r="6"><title>Unload Starter</title></circle>
 <circle id="pos-unload-helper-crowd-control" class="pos" cx="168.0" cy="276.0" r="6"><title>Unload Helper/Crowd Control</title></circle>
 <circle id="pos-unload-computer" class="pos" cx="230.0" cy="276.0" r="6"><title>Unload Computer</title></circle>
-<circle id="pos-gb-lt-starter-1" class="pos" cx="310.0" cy="252.0" r="6"><title>GB/LT Starter 1</title></circle>
-<text class="pos-num" x="310.0" y="254.6">1</text>
-<circle id="pos-gb-lt-starter-2" class="pos" cx="334.0" cy="252.0" r="6"><title>GB/LT Starter 2</title></circle>
-<text class="pos-num" x="334.0" y="254.6">2</text>
-<circle id="pos-gb-lt-computer" class="pos" cx="358.0" cy="252.0" r="6"><title>GB/LT Computer</title></circle>
-<circle id="pos-gb-lt-counter-1" class="pos" cx="382.0" cy="252.0" r="6"><title>GB/LT Counter 1</title></circle>
-<text class="pos-num" x="382.0" y="254.6">1</text>
-<circle id="pos-gb-lt-counter-2" class="pos" cx="406.0" cy="252.0" r="6"><title>GB/LT Counter 2</title></circle>
-<text class="pos-num" x="406.0" y="254.6">2</text>
-<circle id="pos-gb-lt-runner-1" class="pos" cx="310.0" cy="274.0" r="6"><title>GB/LT Runner 1</title></circle>
-<text class="pos-num" x="310.0" y="276.6">1</text>
-<circle id="pos-gb-lt-runner-2" class="pos" cx="334.0" cy="274.0" r="6"><title>GB/LT Runner 2</title></circle>
-<text class="pos-num" x="334.0" y="276.6">2</text>
-<circle id="pos-gb-lt-runner-3" class="pos" cx="358.0" cy="274.0" r="6"><title>GB/LT Runner 3</title></circle>
-<text class="pos-num" x="358.0" y="276.6">3</text>
-<circle id="pos-gb-lt-back-of-tent" class="pos" cx="380.0" cy="316.0" r="6"><title>GB/LT Back of Tent</title></circle>
 <circle id="pos-center-starter" class="pos" cx="108.0" cy="84.0" r="6"><title>Center Starter</title></circle>
 <circle id="pos-naomi-crosswalk-perimeter-1" class="pos" cx="148.0" cy="84.0" r="6"><title>Naomi Crosswalk Perimeter 1</title></circle>
 <text class="pos-num" x="148.0" y="86.6">1</text>

@@ -257,17 +257,20 @@ neither the counts nor the record lies.
 The tarmac map arrived in August 2026 — as a description of the ground
 rather than a site plan, and it ships as a generated schematic:
 `bin/gen-tarmac-map.php` draws `public/assets/map/tarmac.svg` from the
-committee's layout (tent, seven bus lanes, six stop bands north to south,
-back gates east, support crew west, the Bus Ops complex and committee gate
-north, Naomi and Curve/Holly Hall as call-outs beyond the drawing). Every
-one of the 98 positions is one SVG element whose id equals that position's
-`map_ref` (migration 008), My Shift Status highlights the user's own spot
-with his group in a secondary colour, and `tests/map_test.php` pins the
-id contract from both sides. To move a marker when the committee corrects
-a placement: edit the generator, rerun it with `--out`, recommit — the ids
-never change, so the database is untouched. A handful of placements are
-explicitly approximate (GB/LT, Unload, the Bus Callers) and are drawn or
-flagged as such.
+committee's layout (tent, seven bus lanes, seven numbered stop bands north
+to south ending in Gold Badge / LT, back gates outside the east wall,
+support crew west, the Bus Ops complex against the north wall with the
+committee gate beyond it, Naomi and Curve/Holly Hall as call-outs beyond
+the drawing). Every one of the 98 positions is one SVG element whose id
+equals that position's `map_ref` (migration 008), My Shift Status
+highlights the user's own spot with his group in a secondary colour, and
+`tests/map_test.php` pins the id contract from both sides. To move a
+marker when the committee corrects a placement: edit the generator, rerun
+it with `--out`, recommit — the ids never change, so the database is
+untouched. The committee's first corrections (GB/LT into the tent south
+of Maxey, the Bus Callers to Special Events, buildings touching the tent
+walls) landed exactly that way; the one placement still unconfirmed is
+the Unload cluster.
 
 The "What's this?" definitions are part-received: 57 of 98 positions carry
 write-ups scraped from the 2026 Committee Handbook (starters, computers,
