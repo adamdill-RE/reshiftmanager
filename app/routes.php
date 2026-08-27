@@ -1019,6 +1019,50 @@ $router->get('admin/export/csv', static function (App $app, Request $request): R
         ->withHeader('X-Robots-Tag', 'noindex, nofollow');
 });
 
+// ---------------------------------------------------------------------------
+// Audit Log (spec 6.10.9)
+//
+// GET only, deliberately: the log is append-only and is evidence. No POST
+// route for this screen exists, so there is nothing to CSRF-protect and no
+// handler that could be talked into editing a row.
+// ---------------------------------------------------------------------------
+
+$router->get('admin/audit', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ViewAuditLog);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $trail = new Resm\Admin\AuditTrail(
+        $app->db(),
+        $app->config->int('retention.seasons_years', 5),
+    );
+
+    $intOrNull = static function (?string $raw): ?int {
+        return $raw === null || $raw === '' || (int) $raw < 1 ? null : (int) $raw;
+    };
+    $filters = [
+        'shift' => $intOrNull($request->input('shift')),
+        'actor' => $intOrNull($request->input('actor')),
+        'action' => ($action = trim((string) $request->input('action', ''))) === '' ? null : $action,
+        'before' => $intOrNull($request->input('before')),
+    ];
+
+    $page = $trail->entries($filters);
+
+    return Response::html((new View($app))->render('admin/audit', [
+        'title' => 'Audit Log',
+        'entries' => $page['entries'],
+        'more' => $page['more'],
+        'actions' => $trail->actions(),
+        'actors' => $trail->actors(),
+        'shifts' => $trail->shifts(),
+        'filters' => $filters,
+        'retentionYears' => $app->config->int('retention.seasons_years', 5),
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]));
+});
+
 /*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.

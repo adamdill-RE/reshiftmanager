@@ -92,10 +92,9 @@ final class AdminMenu
             'label' => 'Audit Log',
             'sub' => 'Who changed what, and when',
             'capability' => Capability::ViewAuditLog,
-            'built' => false,
-            'summary' => 'Every assignment change, phase flip, check event, PIN reset and '
-                . 'import. Answers "who moved Johnson off Curve 2 and when".',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
     ];
 
