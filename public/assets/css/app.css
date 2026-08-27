@@ -341,6 +341,28 @@ a {
     margin-top: 2rem;
 }
 
+/* An audit row's detail is JSON — one unbroken token can be wider than a
+   phone, and unlike a table there is no natural scroll container, so the
+   value breaks wherever it must. */
+.audit-detail {
+    overflow-wrap: anywhere;
+}
+
+/* A wide table scrolls inside itself. The page body never scrolls sideways —
+   the export preview and the audit log both carry more columns than a phone
+   is wide. */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+}
+
+.table-scroll .checks th,
+.table-scroll .checks td {
+    white-space: nowrap;
+    padding-right: 0.75rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
     * {
         animation: none !important;

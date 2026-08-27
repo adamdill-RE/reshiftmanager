@@ -953,6 +953,218 @@ $router->get('admin/import/errors', static function (App $app, Request $request)
         ->withHeader('X-Robots-Tag', 'noindex, nofollow');
 });
 
+// ---------------------------------------------------------------------------
+// Export Roster (spec 6.10.4)
+//
+// The one screen that hands personal data out in bulk (spec 10.5): the guard
+// is the capability, which Access grants to Admins only, and it is on the CSV
+// endpoint itself — not just the page that links to it.
+// ---------------------------------------------------------------------------
+
+$router->get('admin/export', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $season = adminSeasons($app)->active();
+    $export = rosterExport($app);
+
+    $shift = null;
+    $rows = [];
+    $error = null;
+
+    $requested = $request->input('shift');
+    if ($season !== null && $requested !== null) {
+        $shift = $export->shift((int) $requested);
+        if ($shift === null) {
+            $error = 'That shift does not exist, or is older than the five-year retention window.';
+        } else {
+            $rows = $export->rows($shift);
+        }
+    }
+
+    return Response::html((new View($app))->render('admin/export', [
+        'title' => 'Export Roster',
+        'season' => $season,
+        'shifts' => $season === null ? [] : $export->shifts(),
+        'shift' => $shift,
+        'rows' => $rows,
+        'error' => $error,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]));
+});
+
+$router->get('admin/export/csv', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $export = rosterExport($app);
+    $shift = $export->shift((int) $request->input('shift', '0'));
+    if ($shift === null) {
+        return notFoundResponse($app);
+    }
+
+    /*
+     * The BOM is for Excel, which otherwise guesses the encoding of a plain
+     * CSV and mangles every name with an accent. Import strips it back off
+     * (Csv::rows), so the round trip is unharmed.
+     */
+    return Response::text("\xEF\xBB\xBF" . $export->csv($shift, $export->rows($shift)))
+        ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+        ->withHeader('Content-Disposition', 'attachment; filename="' . $export->filename($shift) . '"')
+        ->withHeader('Cache-Control', 'no-store')
+        ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+});
+
+// ---------------------------------------------------------------------------
+// Position Matrix Editor (spec 6.10.8)
+// ---------------------------------------------------------------------------
+
+$router->get('admin/matrix', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html(matrixPage($app, notice: match ($request->input('done')) {
+        'created' => 'Position created.',
+        'saved' => 'Saved.',
+        'retired' => 'Retired. Every record that points at it is intact.',
+        'restored' => 'Restored.',
+        default => null,
+    }));
+});
+
+$router->get('admin/matrix/edit', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $matrix = positionMatrix($app);
+
+    $position = null;
+    $id = (int) $request->input('id', '0');
+    if ($id > 0) {
+        $position = $matrix->position($id);
+        if ($position === null) {
+            return notFoundResponse($app);
+        }
+    }
+
+    return Response::html((new View($app))->render('admin/matrix-edit', [
+        'title' => $position === null ? 'Add a position' : 'Edit position',
+        'position' => $position,
+        'groups' => $matrix->groups(),
+        'groupId' => (int) $request->input('group', '0'),
+        'error' => null,
+        'back' => ['url' => $app->url('admin/matrix'), 'label' => 'Position Matrix'],
+    ]));
+});
+
+$router->post('admin/matrix', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(matrixPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $matrix = positionMatrix($app);
+    $id = (int) $request->input('id', '0');
+    $action = $request->input('action');
+
+    // The phase checkboxes arrive nested — phases[unload][present] — which
+    // Request::input rightly refuses to flatten, so they are read raw here.
+    $input = [
+        'label' => $request->input('label', ''),
+        'group_id' => (int) $request->input('group_id', '0'),
+        'sort_order' => (int) $request->input('sort_order', '0'),
+        'is_radio' => $request->input('is_radio') !== null,
+        'phases' => is_array($request->post['phases'] ?? null) ? $request->post['phases'] : [],
+    ];
+
+    $result = match ($action) {
+        'create' => $matrix->create($user, $input),
+        'update' => $matrix->update($user, $id, $input),
+        'retire' => $matrix->retire($user, $id),
+        'restore' => $matrix->restore($user, $id),
+        default => ['ok' => false, 'error' => 'That is not a thing this screen does.', 'id' => null],
+    };
+
+    if ($result['ok']) {
+        return Response::redirect($app->url('admin/matrix?done=' . match ($action) {
+            'create' => 'created',
+            'update' => 'saved',
+            'retire' => 'retired',
+            default => 'restored',
+        }));
+    }
+
+    // Back to the form with the error, keeping what was typed out of scope —
+    // the matrix is small and the form is short.
+    if ($action === 'create' || $action === 'update') {
+        return Response::html((new View($app))->render('admin/matrix-edit', [
+            'title' => $action === 'create' ? 'Add a position' : 'Edit position',
+            'position' => $id > 0 ? $matrix->position($id) : null,
+            'groups' => $matrix->groups(),
+            'groupId' => $input['group_id'],
+            'error' => $result['error'],
+            'back' => ['url' => $app->url('admin/matrix'), 'label' => 'Position Matrix'],
+        ]), 400);
+    }
+
+    return Response::html(matrixPage($app, error: $result['error']), 400);
+});
+
+// ---------------------------------------------------------------------------
+// Audit Log (spec 6.10.9)
+//
+// GET only, deliberately: the log is append-only and is evidence. No POST
+// route for this screen exists, so there is nothing to CSRF-protect and no
+// handler that could be talked into editing a row.
+// ---------------------------------------------------------------------------
+
+$router->get('admin/audit', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ViewAuditLog);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $trail = new Resm\Admin\AuditTrail(
+        $app->db(),
+        $app->config->int('retention.seasons_years', 5),
+    );
+
+    $intOrNull = static function (?string $raw): ?int {
+        return $raw === null || $raw === '' || (int) $raw < 1 ? null : (int) $raw;
+    };
+    $filters = [
+        'shift' => $intOrNull($request->input('shift')),
+        'actor' => $intOrNull($request->input('actor')),
+        'action' => ($action = trim((string) $request->input('action', ''))) === '' ? null : $action,
+        'before' => $intOrNull($request->input('before')),
+    ];
+
+    $page = $trail->entries($filters);
+
+    return Response::html((new View($app))->render('admin/audit', [
+        'title' => 'Audit Log',
+        'entries' => $page['entries'],
+        'more' => $page['more'],
+        'actions' => $trail->actions(),
+        'actors' => $trail->actors(),
+        'shifts' => $trail->shifts(),
+        'filters' => $filters,
+        'retentionYears' => $app->config->int('retention.seasons_years', 5),
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]));
+});
+
 /*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.
@@ -1285,6 +1497,35 @@ function shiftsPage(
         'scripts' => ['js/shift-form.js'],
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
     ]);
+}
+
+function positionMatrix(App $app): Resm\Admin\PositionMatrix
+{
+    return new Resm\Admin\PositionMatrix($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function matrixPage(App $app, ?string $error = null, ?string $notice = null): string
+{
+    $matrix = positionMatrix($app);
+
+    return (new View($app))->render('admin/matrix', [
+        'title' => 'Position Matrix',
+        'groups' => $matrix->groups(),
+        'counts' => $matrix->counts(),
+        'baseline' => Resm\Admin\PositionMatrix::BASELINE,
+        'notice' => $notice,
+        'error' => $error,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function rosterExport(App $app): Resm\Admin\RosterExport
+{
+    return new Resm\Admin\RosterExport(
+        $app->db(),
+        $app->displayTimezone(),
+        $app->config->int('retention.seasons_years', 5),
+    );
 }
 
 function rosterImport(App $app): RosterImport

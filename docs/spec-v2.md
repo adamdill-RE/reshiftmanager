@@ -358,7 +358,7 @@ A persistent bar visible to Officers and Admins only, on every Officer Menu scre
 - List of the team, sorted Last Name, First Name.
 - Phone number column rendered as a tap-to-call link.
 - Certified skills displayed beneath each name as compact chips.
-- Edit button per person opens a checkbox sheet for the eight skills. Skills persist across shifts and seasons.
+- Edit button per person opens a checkbox sheet for the ten skills (Section 7.1). Skills persist across shifts and seasons.
 - Check in / Check out button per person — officers do this often, for dead phones and for people who leave sick.
 - Reset PIN button per person, resetting to 1234 with a confirmation toast.
 - "Add walk-on" button captures last name, first name, phone and optional Member ID in under 20 seconds, creating an active member for this season.
@@ -577,7 +577,7 @@ Criticality does not vary by phase: one list, applied to whichever phases a posi
 
 | Attribute | Meaning |
 | --- | --- |
-| Radio | Position requires a radio. Drives the radio skill filter and soft warning. |
+| Radio | Position requires a radio. Drives the radio skill filter (the soft warning was removed by Section 7.4). |
 | Multi | More than one committeeman may hold this position simultaneously. True only for the three Unload group positions. |
 | Carry | Assignment in Unload auto-populates the same person into the same position in Bump and Run, until overridden. |
 | Critical | Counts toward the "Critical covered" figure. Vacant critical positions are pinned to the top of the assign board in red. Configurable per position per phase. |
@@ -831,7 +831,7 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. Reed Road carries a single critical Computer and Counter for the group rather than one per gate: Reed and Employee can run from one gate when short, which is a management change on the ground rather than a second critical pair. |
 | ~~5~~ | **Answered.** It happens, and the resolution rule is in Section 5.5. Current shift is the one he is checked into and has not left, ended shifts excluded; ties go to the earlier start and are shown as a double. Check-out is what moves him on, not the clock, and it vacates his old position in the same moment. The officer taking him on is warned (6.9.4 rule 7). |
 | ~~6~~ | **Answered — no.** "Whatever keeps the UI clean", and the assign board is already the densest screen in the application. The 5.3 window opens the next shift at midnight anyway, and an officer who stays on simply becomes current on it, so a second shift's data on that screen buys little for what it costs. |
-| 7 | Retention: how many seasons of history should stay live before archival? |
+| ~~7~~ | **Answered — five years.** Seasons stay live and queryable for five years before archival; the audit log and the export range over that window. It bounds a query and never a delete: anything older is a candidate for archival by somebody who has decided to archive it, not something the software does on its own. In configuration as `retention.seasons_years`. |
 | 8 | Is there a Rodeo Express or committee logo to use in place of the wordmark on the login screen? |
 
 *End of specification, version 2.0*

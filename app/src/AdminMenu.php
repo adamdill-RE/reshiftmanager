@@ -75,28 +75,25 @@ final class AdminMenu
             'label' => 'Export Roster',
             'sub' => 'CSV, per shift',
             'capability' => Capability::ImportExportRoster,
-            'built' => false,
-            'summary' => 'Names, Member IDs, check-in and check-out times, last assigned '
-                . 'position in each phase, and certified skills.',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'matrix' => [
             'label' => 'Position Matrix Editor',
-            'sub' => '98 positions, 10 groups',
+            'sub' => 'Positions, phases and flags',
             'capability' => Capability::EditPositionMatrix,
-            'built' => false,
-            'summary' => 'Add, rename, reorder, retire and re-flag positions without a code '
-                . 'change. Retiring one keeps the history that points at it.',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'audit' => [
             'label' => 'Audit Log',
             'sub' => 'Who changed what, and when',
             'capability' => Capability::ViewAuditLog,
-            'built' => false,
-            'summary' => 'Every assignment change, phase flip, check event, PIN reset and '
-                . 'import. Answers "who moved Johnson off Curve 2 and when".',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
     ];
 
