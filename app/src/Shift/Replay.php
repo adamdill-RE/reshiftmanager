@@ -6,7 +6,6 @@ namespace Resm\Shift;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use PDOException;
 use Resm\Auth\Identity;
 use Resm\Database;
 
@@ -32,8 +31,10 @@ use Resm\Database;
  * A collision is a success. The client deletes a queued item only when the
  * server has confirmed it, so an answer lost on the way back is one it is
  * required to send again. The unique indexes from migration 007 make the
- * second arrival land on the first, and this reports that as done rather than
- * as an error — the alternative is a queue that can never drain.
+ * second arrival land on the first, and Attendance reports that as done rather
+ * than as an error — the alternative is a queue that can never drain. It is
+ * handled there rather than here because the same collision happens between
+ * two LIVE writes, and one answer to it beats two.
  */
 final class Replay
 {
@@ -85,37 +86,24 @@ final class Replay
             return self::rejected('That is not a shift of yours to record against.');
         }
 
-        try {
-            $result = $kind === 'check'
-                ? $this->attendance->record(
-                    $user,
-                    $shift,
-                    $user->id,
-                    (string) ($item['type'] ?? ''),
-                    $now,
-                    $occurredAt,
-                )
-                : $this->attendance->setLunch(
-                    $user,
-                    (int) $shift['id'],
-                    $user->id,
-                    (string) ($item['state'] ?? ''),
-                    $now,
-                    $occurredAt,
-                    $shift,
-                );
-        } catch (PDOException $e) {
-            if (self::isDuplicate($e)) {
-                // Already landed, on an earlier attempt whose answer never got
-                // home. Done is done.
-                return [
-                    'ok' => true, 'error' => null, 'status' => 200, 'retry' => false,
-                    'at' => $occurredAt->format('c'), 'claimed' => $occurredAt->format('c'),
-                ];
-            }
-
-            throw $e;
-        }
+        $result = $kind === 'check'
+            ? $this->attendance->record(
+                $user,
+                $shift,
+                $user->id,
+                (string) ($item['type'] ?? ''),
+                $now,
+                $occurredAt,
+            )
+            : $this->attendance->setLunch(
+                $user,
+                (int) $shift['id'],
+                $user->id,
+                (string) ($item['state'] ?? ''),
+                $now,
+                $occurredAt,
+                $shift,
+            );
 
         if (!$result['ok']) {
             return self::rejected((string) $result['error']);
@@ -196,11 +184,6 @@ final class Replay
         }
 
         return $parsed->setTimezone(new DateTimeZone('UTC'));
-    }
-
-    private static function isDuplicate(PDOException $e): bool
-    {
-        return ($e->errorInfo[1] ?? null) === 1062;
     }
 
     /**

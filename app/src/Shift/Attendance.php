@@ -6,6 +6,7 @@ namespace Resm\Shift;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use PDOException;
 use Resm\AuditLog;
 use Resm\Auth\Identity;
 use Resm\Database;
@@ -20,6 +21,14 @@ use Resm\Database;
  * check_event is append-only. A mis-tap corrected a second later leaves both
  * rows and the newer one is the truth, which is what keeps the record honest
  * about what actually happened rather than only about how it ended up.
+ *
+ * Since migration 007 an event is unique on (shift, user, type, occurred_at),
+ * which is what makes an offline replay idempotent. The same index also
+ * catches a live race — an officer checking a man in from the roster screen at
+ * the very second the man taps it himself. Both read his state as "out", so
+ * neither takes the no-op path below and both insert. That collision is not an
+ * error to show anybody: the event they were both recording is recorded, and
+ * whichever request lost the race should answer exactly as the one that won.
  */
 final class Attendance
 {
@@ -86,51 +95,66 @@ final class Attendance
 
         $vacated = 0;
 
-        $this->db->transaction(function (Database $db) use (
-            $shiftId, $subjectId, $type, $actor, $source, $now, $happenedAt, &$vacated
-        ): void {
-            $db->execute(
-                'INSERT INTO check_event (shift_id, user_id, type, occurred_at, recorded_at, recorded_by, source)
-                 VALUES (:shift_id, :user_id, :type, :occurred_at, :recorded_at, :recorded_by, :source)',
-                [
-                    'shift_id' => $shiftId,
-                    'user_id' => $subjectId,
-                    'type' => $type,
-                    'occurred_at' => $happenedAt->format('Y-m-d H:i:s'),
-                    'recorded_at' => $now->format('Y-m-d H:i:s'),
-                    'recorded_by' => $actor->id,
-                    'source' => $source,
-                ]
-            );
+        try {
+            $this->db->transaction(function (Database $db) use (
+                $shiftId, $subjectId, $type, $actor, $source, $now, $happenedAt, &$vacated
+            ): void {
+                    $db->execute(
+                        'INSERT INTO check_event (shift_id, user_id, type, occurred_at, recorded_at, recorded_by, source)
+                         VALUES (:shift_id, :user_id, :type, :occurred_at, :recorded_at, :recorded_by, :source)',
+                        [
+                            'shift_id' => $shiftId,
+                            'user_id' => $subjectId,
+                            'type' => $type,
+                            'occurred_at' => $happenedAt->format('Y-m-d H:i:s'),
+                            'recorded_at' => $now->format('Y-m-d H:i:s'),
+                            'recorded_by' => $actor->id,
+                            'source' => $source,
+                        ]
+                    );
 
-            // Spec 6.4: checking out vacates the user's positions in BOTH
-            // phases. That is what makes a dual-team handover self-healing —
-            // the spot he is leaving falls open on his officer's board at the
-            // moment he leaves, red and pinned if it is critical, without
-            // anybody having to coordinate it (spec 5.5).
-            if ($type === 'out') {
-                $vacated = $db->execute(
-                    'UPDATE assignment
-                        SET is_current = 0, vacated_at = :vacated_at
-                      WHERE shift_id = :shift_id AND user_id = :user_id AND is_current = 1',
-                    [
-                        // The position falls open when the server learns of it,
-                        // not when the phone says he left. An officer reading
-                        // the board needs to know when the spot became his
-                        // problem.
-                        'vacated_at' => $now->format('Y-m-d H:i:s'),
-                        'shift_id' => $shiftId,
-                        'user_id' => $subjectId,
-                    ]
-                );
+                    // Spec 6.4: checking out vacates the user's positions in BOTH
+                    // phases. That is what makes a dual-team handover self-healing —
+                    // the spot he is leaving falls open on his officer's board at the
+                    // moment he leaves, red and pinned if it is critical, without
+                    // anybody having to coordinate it (spec 5.5).
+                    if ($type === 'out') {
+                        $vacated = $db->execute(
+                            'UPDATE assignment
+                                SET is_current = 0, vacated_at = :vacated_at
+                              WHERE shift_id = :shift_id AND user_id = :user_id AND is_current = 1',
+                            [
+                                // The position falls open when the server learns of it,
+                                // not when the phone says he left. An officer reading
+                                // the board needs to know when the spot became his
+                                // problem.
+                                'vacated_at' => $now->format('Y-m-d H:i:s'),
+                                'shift_id' => $shiftId,
+                                'user_id' => $subjectId,
+                            ]
+                        );
+                    }
+
+                    // Every client polling this shift needs to see the board move.
+                    $db->execute(
+                        'UPDATE state_version SET version = version + 1 WHERE shift_id = :shift_id',
+                        ['shift_id' => $shiftId]
+                    );
+                });
+        } catch (PDOException $e) {
+            if (!self::isDuplicate($e)) {
+                throw $e;
             }
 
-            // Every client polling this shift needs to see the board move.
-            $db->execute(
-                'UPDATE state_version SET version = version + 1 WHERE shift_id = :shift_id',
-                ['shift_id' => $shiftId]
-            );
-        });
+            // Somebody else recorded this exact event first — the other half
+            // of a race, or a replay whose answer never got home. It did the
+            // vacate, the version bump and the audit entry; a second audit row
+            // would say it happened twice when it happened once.
+            return [
+                'ok' => true, 'error' => null, 'at' => $happenedAt,
+                'vacated' => 0, 'claimed' => $claimed,
+            ];
+        }
 
         $this->audit->record(
             $actor->id,
@@ -175,6 +199,11 @@ final class Attendance
      *
      * @param array<string, mixed> $shift
      */
+    private static function isDuplicate(PDOException $e): bool
+    {
+        return ($e->errorInfo[1] ?? null) === 1062;
+    }
+
     private static function sane(
         DateTimeImmutable $claimed,
         array $shift,
@@ -260,41 +289,55 @@ final class Attendance
         $happenedAt = $occurredAt === null ? $now : self::sane($occurredAt, $shift, $now);
         $vacated = 0;
 
-        $this->db->transaction(function (Database $db) use (
-            $shiftId, $subjectId, $state, $actor, $now, $happenedAt, $source, &$vacated
-        ): void {
-            $db->execute(
-                'INSERT INTO lunch_event (shift_id, user_id, state, occurred_at, recorded_at, recorded_by, source)
-                 VALUES (:shift_id, :user_id, :state, :occurred_at, :recorded_at, :recorded_by, :source)',
-                [
-                    'shift_id' => $shiftId,
-                    'user_id' => $subjectId,
-                    'state' => $state,
-                    'occurred_at' => $happenedAt->format('Y-m-d H:i:s'),
-                    'recorded_at' => $now->format('Y-m-d H:i:s'),
-                    'recorded_by' => $actor->id,
-                    'source' => $source,
-                ]
-            );
-
-            if ($state === 'at_lunch') {
-                $vacated = $db->execute(
-                    'UPDATE assignment
-                        SET is_current = 0, vacated_at = :vacated_at
-                      WHERE shift_id = :shift_id AND user_id = :user_id AND is_current = 1',
+        try {
+            $this->db->transaction(function (Database $db) use (
+                $shiftId, $subjectId, $state, $actor, $now, $happenedAt, $source, &$vacated
+            ): void {
+                $db->execute(
+                    'INSERT INTO lunch_event (shift_id, user_id, state, occurred_at, recorded_at, recorded_by, source)
+                     VALUES (:shift_id, :user_id, :state, :occurred_at, :recorded_at, :recorded_by, :source)',
                     [
-                        'vacated_at' => $now->format('Y-m-d H:i:s'),
                         'shift_id' => $shiftId,
                         'user_id' => $subjectId,
+                        'state' => $state,
+                        'occurred_at' => $happenedAt->format('Y-m-d H:i:s'),
+                        'recorded_at' => $now->format('Y-m-d H:i:s'),
+                        'recorded_by' => $actor->id,
+                        'source' => $source,
                     ]
                 );
+
+                if ($state === 'at_lunch') {
+                    $vacated = $db->execute(
+                        'UPDATE assignment
+                            SET is_current = 0, vacated_at = :vacated_at
+                          WHERE shift_id = :shift_id AND user_id = :user_id AND is_current = 1',
+                        [
+                            'vacated_at' => $now->format('Y-m-d H:i:s'),
+                            'shift_id' => $shiftId,
+                            'user_id' => $subjectId,
+                        ]
+                    );
+                }
+
+                $db->execute(
+                    'UPDATE state_version SET version = version + 1 WHERE shift_id = :shift_id',
+                    ['shift_id' => $shiftId]
+                );
+            });
+        } catch (PDOException $e) {
+            if (!self::isDuplicate($e)) {
+                throw $e;
             }
 
-            $db->execute(
-                'UPDATE state_version SET version = version + 1 WHERE shift_id = :shift_id',
-                ['shift_id' => $shiftId]
-            );
-        });
+            // Two officers moving the same man to lunch in the same second,
+            // or a replay arriving twice. The state they were both setting
+            // is set; a second audit row would say it happened twice.
+            return [
+                'ok' => true, 'error' => null, 'at' => $happenedAt,
+                'vacated' => 0, 'claimed' => $claimed,
+            ];
+        }
 
         $this->audit->record(
             $actor->id,

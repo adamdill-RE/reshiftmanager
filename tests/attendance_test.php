@@ -256,3 +256,77 @@ test('the assignment lookup reports criticality and group', function (): void {
         assertSame(1, (int) $found['unload']['is_critical'], 'confirmed critical in migration 004');
     });
 });
+
+// ---------------------------------------------------------------------------
+// Two writers, one event (migration 007)
+// ---------------------------------------------------------------------------
+
+test('two live writes of the same event answer alike and write one row', function (): void {
+    inRollback(function (Database $db): void {
+        $f = officerFixture($db, 'att-race');
+        $man = $f['roster'][0];
+        $officerId = officerUser($db, 'att-race');
+        $db->execute(
+            'INSERT INTO team_member (user_id, team_id, season_id) VALUES (:u, :t, :s)',
+            ['u' => $officerId, 't' => $f['teamB'], 's' => $f['season']]
+        );
+
+        $attendance = new Attendance($db, new AuditLog($db));
+        $shift = shiftRow($db, $f['day']);
+        $at = utc('2027-03-06 09:00');
+
+        // The tarmac case: an officer checks him in from the roster screen at
+        // the very second he taps it himself. Both read his state as "out", so
+        // neither takes the no-op path, and both insert — which the uniqueness
+        // migration 007 added would turn into a 500 page if nobody caught it.
+        $self = $attendance->record(
+            samActor($man),
+            $shift,
+            $man,
+            'in',
+            $at
+        );
+
+        $byOfficer = $attendance->record(
+            officerIdentity(Role::Officer, [$f['teamB']], $officerId),
+            $shift,
+            $man,
+            'in',
+            $at
+        );
+
+        assertTrue($self['ok'], 'the one that won');
+        assertTrue($byOfficer['ok'], 'and the one that lost must answer the same way');
+
+        assertSame(1, (int) $db->value(
+            'SELECT COUNT(*) FROM check_event WHERE shift_id = :s AND user_id = :u',
+            ['s' => $f['day'], 'u' => $man]
+        ), 'one event, recorded once');
+
+        // And logged once. Two audit rows would say it happened twice.
+        assertSame(1, (int) $db->value(
+            "SELECT COUNT(*) FROM audit_log WHERE shift_id = :s AND action = 'check_in'",
+            ['s' => $f['day']]
+        ));
+    });
+});
+
+test('two live lunch writes of the same state do the same', function (): void {
+    inRollback(function (Database $db): void {
+        $f = officerFixture($db, 'att-lunch-race');
+        $man = $f['roster'][0];
+        $attendance = new Attendance($db, new AuditLog($db));
+        $at = utc('2027-03-06 12:00');
+        $who = samActor($man);
+
+        $first = $attendance->setLunch($who, $f['day'], $man, 'at_lunch', $at);
+        $second = $attendance->setLunch($who, $f['day'], $man, 'at_lunch', $at);
+
+        assertTrue($first['ok']);
+        assertTrue($second['ok']);
+        assertSame(1, (int) $db->value(
+            'SELECT COUNT(*) FROM lunch_event WHERE shift_id = :s AND user_id = :u',
+            ['s' => $f['day'], 'u' => $man]
+        ));
+    });
+});
