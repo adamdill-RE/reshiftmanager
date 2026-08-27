@@ -43,6 +43,16 @@ deployment:
     # precisely because nothing serves this directory.
     - /bin/mkdir -p $APP_DIR/var/sessions $APP_DIR/var/imports
     - /bin/chmod 0700 $APP_DIR/var $APP_DIR/var/sessions $APP_DIR/var/imports
-    # Migrations are NOT run automatically. Apply them by hand over SSH or
-    # cPanel Terminal, after checking what is pending:
-    #   cd ~/resm-app && php bin/migrate.php --status && php bin/migrate.php
+    # Migrations are NOT run automatically, and this account has NEITHER SSH
+    # NOR cPanel Terminal - so bin/migrate.php cannot be reached at all, and
+    # the command this comment used to give could never have been run here.
+    #
+    # Check what is pending:      /resm/status?key=<status_key>
+    # Apply it, from a browser:   /resm/setup?key=<setup_key>
+    #
+    # status_key stays in config.local.php. setup_key does not: whoever holds
+    # it can take the master admin account, so it is added to config.local.php
+    # (cPanel File Manager, since there is no shell) only for as long as it
+    # takes to apply the migration, and the line is removed again afterwards.
+    # With no key configured the /setup route does not exist, and that is the
+    # state to leave it in.

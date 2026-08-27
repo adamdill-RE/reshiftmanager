@@ -72,15 +72,15 @@ Whoever holds that key can take the master admin account, so **remove the
 `setup_key` line once the app is running** — with no key configured the route
 does not exist, and that is the state to leave it in.
 
-The CLI scripts remain the better path wherever a shell is available.
+Migrations are **not** run automatically, and on this account the browser
+route is the only way to apply them. Check what is pending with
+`/resm/status?key=…`, which needs only the `status_key` that stays configured;
+then add `setup_key` back to `config.local.php` through cPanel File Manager,
+visit `/resm/setup?key=…`, apply, and remove the line again.
 
-Migrations are **not** run automatically. Over SSH or cPanel Terminal:
-
-```sh
-cd ~/resm-app
-php bin/migrate.php --status
-php bin/migrate.php
-```
+The CLI equivalents — `php bin/migrate.php --status` and `php bin/migrate.php`
+from `~/resm-app` — are the better path on any host that has a shell. This one
+does not, so they are for local development and for a future move.
 
 **The database is not on the web server.** Ahosting runs it separately, so
 `db.host` is the address cPanel shows under Remote MySQL — an IP rather than a
@@ -113,7 +113,7 @@ line; schema migrations cannot, because MySQL commits implicitly on DDL.
 **The position matrix is generated, not typed.** `db/migrations/002_seed_reference.sql`
 comes from `bin/gen-position-seed.php`, which parses section 8.3 of the spec
 and refuses to emit anything unless the counts still come to 98 positions, 157
-position-phase records, 22 radio, 23 critical and 3 multi-assign. After
+position-phase records, 22 radio, 39 critical and 3 multi-assign. After
 go-live, the Position Matrix Editor (spec 6.10.8) edits those tables directly.
 
 **The database enforces the assignment rules.** Two officers will assign at the
@@ -169,8 +169,13 @@ rate limit, and it is a decision to revisit if the threat model changes.
 
 ## Where this build stands
 
-Phase 1 of the build sequence in spec 11.1 is complete: schema, seed data,
-authentication, the PIN and session model, and role scaffolding.
+Phases 1 to 5 of the build sequence in spec 11.1 are complete: schema and seed
+data, authentication, the Admin Menu, the committeeman experience, the Officer
+Menu, and now the PWA shell, service worker, offline queue and polling layer.
+
+**Phase 6 is next**: export, audit log, the Position Matrix Editor, hardening
+and load testing. Broadcast was listed there and shipped with Phase 4, because
+the Officer Menu is where an officer reaches for it.
 
 The permission matrix from spec 2.2 is encoded once, in `Resm\Auth\Capability`
 and `Resm\Auth\Access`, and transcribed a second time in `tests/access_test.php`
@@ -178,17 +183,55 @@ so a change has to be made in both places on purpose. A team-scoped capability
 requires a named team: asking whether an officer may assign positions without
 saying which team is not a question with an answer, and it denies.
 
-Screens the build sequence has not reached render a placeholder naming the
-phase that will build them — behind the same role guard the real screen will
-use, so `/officer` and `/admin` already refuse the wrong role server-side.
+### Live updates and offline
 
-**Phase 2 is next**: the Admin Menu — seasons, teams, CSV import with a dry
-run, shift creation and user creation.
+There are no WebSockets and no SSE anywhere, and there never will be: LVE caps
+concurrent entry processes per account, so held-open connections are not
+available on this host (`docs/hosting.md`). Clients short-poll `GET /api/state`
+instead. Almost every call is answered "nothing changed", so that path is one
+indexed lookup and a 304 with no body — and the team check is folded into the
+same statement as the version read, because an authorisation done separately
+would double the cost of the one path that has to stay free.
 
-Open items in spec 11.5 that this build assumes an answer to, and which should
-be confirmed before Phase 4:
+`public/assets/js/poll.js` is the transport and knows nothing about any screen.
+Spec 10.2 wants it swappable for Web Push without touching the screens, so the
+events it publishes are the contract and the `setTimeout` underneath them is
+not.
 
-- Criticality is seeded identically in both phases, because the spec gives one
-  Critical column. Open item 4 asks whether it should differ per phase.
-- Default active position groups per shift type are not seeded at all — open
-  item 1. Without them the "open positions" count has nothing to scope to.
+**A stale screen must never look live.** `poll.js` seeds its freshness clock
+from the server's own render time, not from when the script ran — the two are
+the same on a page from the network and hours apart on one the service worker
+served from cache. Anything that caches a page has to keep that true.
+
+**The service worker's cache version comes from the assets' own mtimes**, so a
+deploy renames every cache and `activate` deletes what came before. `sw.js` is
+served from `public/` (not `assets/`) so its scope is the whole app, and
+`public/.htaccess` exempts it from the one-year expiry every other script gets.
+Both failures are silent, and both are tested.
+
+**Only three writes may be recorded late** — check in, check out, lunch —
+and a form is queued only if it carries `data-offline`. Officer assignment
+writes are never optimistic (spec 10.3, 10.4): two officers assigning at once
+is resolved by the server and by the unique indexes on `assignment`, and a
+phone in a pocket cannot take part in that. `tests/replay_test.php` pins the
+complete list of queueable forms.
+
+**A queued event keeps the moment of the tap**, not the moment it synced.
+`occurred_at` is the device's clock, `recorded_at` is the server's, and the gap
+between them is the only thing that exposes a handset set wrong. A claimed time
+is clamped to the shift and to now, and the raw claim goes to the audit log, so
+neither the counts nor the record lies.
+
+### Still owed by Rodeo Express
+
+The tarmac map SVG has the longest lead time of anything outstanding — 98
+positions have to be marked on a site plan first. The viewer is built and ships
+a plainly-labelled placeholder; the drawing drops in at
+`public/assets/map/tarmac.svg` with each position's element id matching its
+`map_ref`, and nothing else changes. There is deliberately no drawn-in tarmac:
+a made-up layout would look finished and send a new committeeman confidently to
+the wrong place.
+
+Also owed: the "What's this?" position definitions (`position.definition`) and
+the Rodeo Information copy (spec 6.8), both of which the screens already make
+room for.

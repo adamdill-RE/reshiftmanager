@@ -110,6 +110,88 @@ $router->post('logout', static function (App $app, Request $request): Response {
 });
 
 // ---------------------------------------------------------------------------
+// The PWA shell (spec 10.1)
+//
+// The manifest is built by Resm\Pwa\Manifest rather than shipped as a file;
+// the reason is documented there.
+// ---------------------------------------------------------------------------
+
+/*
+ * Replaying the offline queue (spec 10.3).
+ *
+ * One queued event per request. The queue is a handful of taps, so a batch
+ * body would buy nothing and cost the ability to say which item failed — and
+ * with each item answered on its own, the client deletes exactly what landed
+ * and keeps exactly what did not.
+ *
+ * This is the ONLY write in the application that may arrive late, and it is
+ * deliberately limited to the three things spec 10.3 names: check in, check
+ * out, lunch. Officer assignment writes are never optimistic and never queued;
+ * two officers assigning at once is resolved by the server and by the unique
+ * indexes on assignment, which a replay from a pocket cannot participate in.
+ */
+$router->post('api/sync', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return pollResponse(Response::json(['ok' => false, 'error' => 'signed-out', 'retry' => false], 401));
+    }
+
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        // Worth retrying, once the client has a fresh token: the usual cause
+        // is a page the service worker served from cache, carrying a token
+        // from a session that has since rotated.
+        return pollResponse(Response::json(['ok' => false, 'error' => 'stale-token', 'retry' => true], 400));
+    }
+
+    $season = adminSeasons($app)->active();
+    if ($season === null) {
+        return pollResponse(Response::json(['ok' => false, 'error' => 'no-season', 'retry' => true], 409));
+    }
+
+    $result = replay($app)->apply($user, (int) $season['id'], [
+        'kind' => $request->input('kind'),
+        'shift' => (int) $request->input('shift', '0'),
+        'type' => $request->input('type'),
+        'state' => $request->input('state'),
+        'at' => $request->input('at'),
+    ]);
+
+    return pollResponse(Response::json([
+        'ok' => $result['ok'],
+        'error' => $result['error'],
+        'retry' => $result['retry'],
+        // Echoed so the client can delete exactly the item it sent, without
+        // having to match on anything it computed itself.
+        'client_id' => $request->input('client_id'),
+        'at' => $result['at'],
+    ], $result['status']));
+});
+
+/*
+ * What the service worker caches, and under what version. Unauthenticated on
+ * purpose: it lists only asset URLs that are public anyway, and the worker has
+ * to be able to install from the login screen — before anybody has signed in
+ * is exactly when a phone is most likely to be on wifi in a car park rather
+ * than on a tarmac with no signal.
+ */
+$router->get('sw-manifest.json', static function (App $app, Request $request): Response {
+    return Response::json(Resm\Pwa\Shell::document($app))
+        // The worker fetches this with cache: 'no-store' as well. Both, because
+        // a cached manifest would install a new worker against the old asset
+        // list — the precise stale-shell-after-deploy failure the version
+        // exists to prevent.
+        ->withHeader('Cache-Control', 'no-store');
+});
+
+$router->get('manifest.webmanifest', static function (App $app, Request $request): Response {
+    return Response::json(Resm\Pwa\Manifest::document($app))
+        ->withHeader('Content-Type', 'application/manifest+json; charset=utf-8')
+        // Long enough that it is not re-fetched on every launch, short enough
+        // that a corrected icon reaches an installed phone the same day.
+        ->withHeader('Cache-Control', 'public, max-age=3600');
+});
+
+// ---------------------------------------------------------------------------
 // Tools (spec 6.7)
 // ---------------------------------------------------------------------------
 
@@ -291,6 +373,103 @@ $router->post('my-shift', static function (App $app, Request $request): Response
     }
 
     return Response::redirect($app->url('my-shift?shift=' . (int) $shift['id'] . '&done=1'));
+});
+
+// ---------------------------------------------------------------------------
+// The polling endpoint (spec 10.2)
+//
+// LVE caps concurrent entry processes per account, so held-open connections
+// are out and clients short-poll instead (docs/hosting.md). Everything about
+// this route is shaped by the fact that almost every call to it is answered
+// "nothing has changed": that path is one indexed lookup, no session write, no
+// body, and a 304.
+//
+// It answers JSON rather than redirecting an unauthenticated poller to the
+// login screen — a background fetch cannot use a login page, and a poller that
+// followed one would silently start reporting the login screen as shift state.
+// ---------------------------------------------------------------------------
+
+$router->get('api/state', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return pollResponse(Response::json(['error' => 'signed-out'], 401));
+    }
+
+    $shiftId = (int) $request->input('shift', '0');
+    if ($shiftId <= 0) {
+        return pollResponse(Response::json(['error' => 'no-shift'], 400));
+    }
+
+    $poll = pollState($app);
+    $version = $poll->version($user, $shiftId);
+
+    // A shift that does not exist and a shift this user may not see answer
+    // identically. Distinguishing them would make this endpoint a way to
+    // enumerate other teams' shifts by id.
+    if ($version === null) {
+        return pollResponse(Response::json(['error' => 'no-shift'], 404));
+    }
+
+    // Read BEFORE the session is closed: Csrf::token mints and stores one when
+    // the session has none, and a write after session_write_close is a write
+    // that goes nowhere. It rides along because the offline queue needs a
+    // token the server will still accept, and the page it was rendered into
+    // may have come from the service worker's cache with a token from a
+    // session that has since rotated (spec 10.3, 10.5).
+    $token = Csrf::token();
+
+    // The session is not needed past this point, and holding it open serialises
+    // every other request from the same phone behind the poll — PHP's session
+    // lock is per-session, so a poll every ten seconds would otherwise be ten
+    // seconds of contention against the screen the user is actually tapping.
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
+    $known = $request->input('v');
+    if ($known !== null && $known !== '' && (int) $known === $version) {
+        return pollResponse(Response::notModified());
+    }
+
+    // Only reached when something actually moved, so this is allowed to cost
+    // something. The strip is rendered by the same view the page rendered it
+    // with (spec 6.3) rather than rebuilt in JavaScript, because two renderers
+    // drift and the one that drifts is the one claiming to be live.
+    $widget = Resm\Shift\Widget::forShift($app, $shiftId);
+    $closesAt = $poll->closesAt($shiftId);
+
+    return pollResponse(Response::json([
+        'shift' => $shiftId,
+        'version' => $version,
+        'served_at' => $app->now()->format('c'),
+        'csrf' => $token,
+        'closes_at' => $closesAt?->format('c'),
+        // Null for anyone the strip does not apply to — an officer running a
+        // team's board who is not checked into it himself. The version still
+        // moved, which is what his board is listening for.
+        'phase' => $widget === null ? null : (string) $widget['shift']['current_phase'],
+        'checked_in' => $widget === null ? null : (bool) $widget['shift']['checked_in'],
+        'lunch' => $widget === null ? null : (string) $widget['shift']['lunch'],
+        'widget' => $widget === null
+            ? null
+            : (new View($app))->render('widget', $widget, layout: null),
+    ]));
+});
+
+// ---------------------------------------------------------------------------
+// The Tarmac Map (spec 6.5, 11.4)
+//
+// The drawing is content Rodeo Express still owes. The viewer is built around
+// its absence — see Resm\TarmacMap for the contract the real file drops into.
+// ---------------------------------------------------------------------------
+
+$router->get('map', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    return Response::html(mapPage($app, $user, $request));
 });
 
 $router->get('my-shifts', static function (App $app, Request $request): Response {
@@ -1215,6 +1394,36 @@ function attendance(App $app): Attendance
     return new Attendance($app->db(), new Resm\AuditLog($app->db()));
 }
 
+function replay(App $app): Resm\Shift\Replay
+{
+    return new Resm\Shift\Replay($app->db(), attendance($app));
+}
+
+function pollState(App $app): Resm\Poll\State
+{
+    return new Resm\Poll\State(
+        $app->db(),
+        new Resm\Shift\Window($app->displayTimezone()),
+    );
+}
+
+/**
+ * Headers every polling answer carries.
+ *
+ * no-store rather than no-cache: the whole point of the endpoint is that the
+ * client holds the version and asks whether it moved, so an intermediary
+ * holding its own copy could only ever answer with a staler one. LiteSpeed
+ * with LSCache in front of this would otherwise be free to serve a cached
+ * "nothing changed" to a phone whose board has changed — the one failure the
+ * freshness indicator in spec 6.3 exists to make impossible.
+ */
+function pollResponse(Response $response): Response
+{
+    return $response
+        ->withHeader('Cache-Control', 'no-store, must-revalidate')
+        ->withHeader('X-Robots-Tag', 'noindex');
+}
+
 function checkInPage(
     App $app,
     Resm\Auth\Identity $user,
@@ -1324,6 +1533,75 @@ function myShiftPage(
     ]);
 }
 
+/**
+ * The map screen.
+ *
+ * Built from the same resolution as My Shift Status — his shift, his
+ * assignment, his group — because spec 6.5 wants the map to show where HE is
+ * standing, with everyone else in his group in a secondary colour. Without an
+ * assignment there is nothing to highlight, and the screen says so rather than
+ * showing an unmarked drawing and letting him hunt.
+ */
+function mapPage(App $app, Resm\Auth\Identity $user, ?Request $request = null): string
+{
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $shifts = currentShift($app);
+
+    $resolved = $season === null
+        ? ['current' => null, 'candidates' => [], 'doubled' => false]
+        : $shifts->forUser($user->id, $seasonId);
+
+    $shift = $resolved['current'];
+    $wanted = (string) ($request?->input('shift', '') ?? '');
+    if ($wanted !== '' && $season !== null) {
+        $picked = $shifts->pick($user->id, $seasonId, (int) $wanted);
+        if ($picked !== null) {
+            $shift = $picked;
+        }
+    }
+
+    $assignment = null;
+    $mates = [];
+
+    if ($shift !== null) {
+        $assignment = attendance($app)->assignments((int) $shift['id'], $user->id)[(string) $shift['current_phase']] ?? null;
+
+        if ($assignment !== null) {
+            $mates = (new Roster($app->db()))->groupMates(
+                (int) $shift['id'],
+                (string) $shift['current_phase'],
+                $user->id,
+                (int) $assignment['group_id']
+            );
+        }
+    }
+
+    // Only refs the drawing could actually address. A row with no map_ref, or
+    // one somebody typed a space into, means no highlight rather than a
+    // selector that breaks the whole screen.
+    $mateRefs = [];
+    foreach ($mates as $mate) {
+        $ref = Resm\TarmacMap::ref(isset($mate['map_ref']) ? (string) $mate['map_ref'] : null);
+        if ($ref !== null) {
+            $mateRefs[] = $ref;
+        }
+    }
+
+    return (new View($app))->render('map', [
+        'title' => 'Tarmac Map',
+        'shift' => $shift,
+        'assignment' => $assignment,
+        'svg' => Resm\TarmacMap::read($app),
+        'needed' => Resm\TarmacMap::needed(),
+        'me' => Resm\TarmacMap::ref($assignment === null ? null : (string) ($assignment['map_ref'] ?? '')),
+        'mates' => $mateRefs,
+        'pollShift' => $shift === null ? null : (int) $shift['id'],
+        'scripts' => ['js/map.js'],
+        'back' => ['url' => $app->url('my-shift'), 'label' => 'My Shift Status'],
+    ]);
+}
+
 function loginPage(App $app, ?string $error = null, string $memberId = ''): string
 {
     return (new View($app))->render('login', [
@@ -1344,6 +1622,7 @@ function toolsPage(App $app, Resm\Auth\Identity $user, ?string $error = null, ?s
         'user' => $user,
         'error' => $error,
         'notice' => $notice,
+        'scripts' => ['js/display.js', 'js/install.js'],
         'back' => ['url' => $app->url(), 'label' => 'Menu'],
     ]);
 }

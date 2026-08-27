@@ -124,6 +124,18 @@ html {
     box-sizing: border-box;
 }
 
+/* The hidden attribute has to actually hide.
+   [hidden] is display:none in the UA stylesheet, which any author rule setting
+   display beats on specificity — so .keypad{display:grid} and
+   .install__state{display:flex} both rendered while still marked hidden. That
+   is not a cosmetic slip: it put a dead keypad on the login screen for anyone
+   without JavaScript, and told a man in a browser tab that he was running the
+   installed app. !important because the whole point is to outrank whatever a
+   component sets. */
+[hidden] {
+    display: none !important;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -642,6 +654,14 @@ details[open] > .disclosure::before {
     font-weight: 600;
 }
 
+/* Red when the last ask failed (spec 6.3). Not hue alone: the strip says the
+   word "offline" beside it, because a colour is the one cue that is gone in
+   bright sun through a scratched screen protector. */
+.widget__fresh--offline {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 .widget__note {
     margin: 0.5rem 0 0;
     color: var(--warn);
@@ -1098,4 +1118,218 @@ details[open] > .disclosure::before {
 textarea.field__input {
     font-family: inherit;
     resize: vertical;
+}
+
+/* ---------------------------------------------------------------------------
+   Install instructions (spec 6.7)
+   --------------------------------------------------------------------------- */
+
+.install__state {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+}
+
+.install__how h3 {
+    margin: 0 0 0.5rem;
+}
+
+/* Numbered because they are steps in order, and read one at a time by someone
+   holding a phone in the other hand — hence the line height and the room
+   between them rather than a tight list. */
+.install__steps {
+    margin: 0;
+    padding-left: 1.4rem;
+}
+
+.install__steps li {
+    margin-bottom: 0.6rem;
+    line-height: 1.6;
+}
+
+.install__steps li:last-child {
+    margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Choice groups — Theme and Large Text (spec 9.2, 9.3)
+   --------------------------------------------------------------------------- */
+
+/* The same segmented shape as the phase toggle, which is the control officers
+   already know, but two or three options wide instead of always two. */
+.choice {
+    display: flex;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.choice__option {
+    flex: 1 1 0;
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    border: 0;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* Rodeo Orange with dark text on top, never white — the fill is the accent and
+   the accent is 2.9:1 against white (spec 9.1). */
+.choice__option--on {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+/* ---------------------------------------------------------------------------
+   The staleness banner (spec 6.5, 10.3)
+   --------------------------------------------------------------------------- */
+
+/* Pinned to the bottom, where a thumb already is and where it cannot be
+   scrolled past unnoticed. "A stale view must never be mistakable for a live
+   one", and the strip's own counter is the version for someone who is reading
+   rather than glancing. */
+/* Room for it, so a banner pinned over the thumb-reach zone does not sit on
+   top of the primary action that spec 9.3 puts there. Set by freshness.js at
+   the same moment the banner appears. */
+.has-stale .page {
+    padding-bottom: 6rem;
+}
+
+.stale {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--danger-surface);
+    color: var(--text);
+    border-top: 3px solid var(--danger);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   The offline queue (spec 6.4, 10.3)
+   --------------------------------------------------------------------------- */
+
+/* "1 pending" until it syncs. Amber rather than red: nothing is wrong, the tap
+   was recorded and is waiting for signal. Red is reserved for the screen being
+   stale, which is the thing that can mislead. */
+.pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0.4rem 0.7rem;
+    border: 2px solid var(--warn);
+    border-radius: var(--radius);
+    background: var(--warn-surface);
+    color: var(--warn);
+    font-weight: 700;
+}
+
+/* What the form says back when a tap could not reach the server. It names the
+   time it was saved, because the whole promise of the queue is that the
+   ORIGINAL moment is what gets recorded. */
+.offline-note {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border-left: 4px solid var(--warn);
+    background: var(--warn-surface);
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   The tarmac map (spec 6.5, 11.4)
+   --------------------------------------------------------------------------- */
+
+/* Scrolls inside itself. A site drawing is wider than a phone, and the page
+   body must never scroll sideways. */
+.map {
+    overflow: auto;
+    max-height: 70vh;
+    margin-bottom: 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
+
+.map svg {
+    display: block;
+    max-width: none;
+}
+
+/* His own spot. The accent, with a dark outline rather than white text on it —
+   Rodeo Orange takes dark, never white (spec 9.1). */
+.map .map__me {
+    fill: var(--accent);
+    stroke: var(--ink);
+    stroke-width: 2;
+}
+
+/* Everyone else in his group, in a secondary colour (spec 11.4). */
+.map .map__mate {
+    fill: var(--rodeo-dust);
+    stroke: var(--rodeo-brown);
+    stroke-width: 1.5;
+}
+
+/* The key beneath it. Both marks are shapes as well as colours, because a
+   legend that is colour alone is one nobody can use in direct sunlight. */
+.map__key {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.15rem;
+    vertical-align: -2px;
+    border-radius: 3px;
+}
+
+.map__key--me {
+    background: var(--accent);
+    border: 2px solid var(--ink);
+}
+
+.map__key--mate {
+    background: var(--rodeo-dust);
+    border: 2px dashed var(--rodeo-brown);
+}
+
+/* ---------------------------------------------------------------------------
+   "Someone else has changed this board" (spec 10.4)
+   --------------------------------------------------------------------------- */
+
+/* In the flow at the top of the board rather than fixed over it. The officer
+   is mid-task and this is information, not an interruption — it must not cover
+   the row he is reaching for. */
+.board-moved {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    border: 2px solid var(--warn);
+    border-radius: var(--radius);
+    background: var(--warn-surface);
+    font-weight: 600;
+}
+
+.board-moved .button {
+    flex: 0 0 auto;
 }

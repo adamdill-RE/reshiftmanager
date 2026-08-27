@@ -59,7 +59,7 @@ $call = static function (array $person) use ($app): string {
 </p>
 
 <!-- Spec 6.5: the toggle is here so there is no need to navigate away. -->
-<form method="post" action="<?= e($url) ?>">
+<form method="post" action="<?= e($url) ?>" data-offline="check">
     <?= Resm\Csrf::field() ?>
     <input type="hidden" name="action" value="check">
     <input type="hidden" name="shift_id" value="<?= e($shift['id']) ?>">
@@ -67,6 +67,8 @@ $call = static function (array $person) use ($app): string {
     <button class="button button--primary check-button" type="submit">
         <?= $shift['checked_in'] ? 'CHECK OUT' : 'CHECK IN' ?>
     </button>
+
+    <p class="offline-note" data-offline-note hidden></p>
 </form>
 
 <h2>Your position</h2>
@@ -112,9 +114,21 @@ $call = static function (array $person) use ($app): string {
     </div>
 <?php endif; ?>
 
+<?php
+// Spec 6.5: a quick link to the Tarmac Map with his own position highlighted.
+// Offered whether or not the drawing has arrived — the screen behind it says
+// plainly that it has not, and a link that vanishes is one nobody knows to ask
+// about.
+?>
+<p>
+    <a class="button button--quiet" href="<?= e($app->url('map' . ($shift === null ? '' : '?shift=' . (int) $shift['id']))) ?>">
+        Tarmac Map
+    </a>
+</p>
+
 <h2>Lunch</h2>
 
-<form method="post" action="<?= e($url) ?>">
+<form method="post" action="<?= e($url) ?>" data-offline="lunch">
     <?= Resm\Csrf::field() ?>
     <input type="hidden" name="action" value="lunch">
     <input type="hidden" name="shift_id" value="<?= e($shift['id']) ?>">
@@ -128,6 +142,8 @@ $call = static function (array $person) use ($app): string {
             </button>
         <?php endforeach; ?>
     </div>
+
+    <p class="offline-note" data-offline-note hidden></p>
 </form>
 <p class="field__hint">
     Going to lunch frees your position so it does not read as covered while

@@ -20,6 +20,11 @@ use Throwable;
  * gone away mid-shift, a user with nothing on today — renders no strip and
  * leaves the page underneath working, which matters most for /status, the one
  * page whose job is to be reachable when the database is not.
+ *
+ * The polling layer (spec 10.2) re-renders this same strip from the same data,
+ * which is why forShift exists beside forRequest. A second renderer in
+ * JavaScript would drift from this one, and the screen it drifted on would be
+ * the one claiming to be live.
  */
 final class Widget
 {
@@ -27,14 +32,32 @@ final class Widget
     public static function forRequest(App $app): ?array
     {
         try {
-            return self::build($app);
+            return self::build($app, null);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The strip for one named shift, for a client that is polling it.
+     *
+     * Resolved through the user's own candidate list exactly as forRequest is,
+     * so naming a shift in a query string reaches nothing that resolving it
+     * from the session would not have.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function forShift(App $app, int $shiftId): ?array
+    {
+        try {
+            return self::build($app, $shiftId);
         } catch (Throwable) {
             return null;
         }
     }
 
     /** @return array<string, mixed>|null */
-    private static function build(App $app): ?array
+    private static function build(App $app, ?int $shiftId): ?array
     {
         $user = $app->user();
         if ($user === null) {
@@ -50,6 +73,18 @@ final class Widget
             ->forUser($user->id, (int) $season['id']);
 
         $shift = $resolved['current'];
+
+        // A named shift wins over the resolved default, but only if it is one
+        // of his — the candidate list is the guard, same as everywhere else.
+        if ($shiftId !== null) {
+            $shift = null;
+            foreach ($resolved['candidates'] as $candidate) {
+                if ((int) $candidate['id'] === $shiftId) {
+                    $shift = $candidate;
+                    break;
+                }
+            }
+        }
 
         // Spec 6.3: the strip appears once a user has checked in or out. Before
         // that there is no status to report, and a strip that says nothing is
