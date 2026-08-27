@@ -1253,3 +1253,59 @@ textarea.field__input {
     color: var(--text);
     font-weight: 600;
 }
+
+/* ---------------------------------------------------------------------------
+   The tarmac map (spec 6.5, 11.4)
+   --------------------------------------------------------------------------- */
+
+/* Scrolls inside itself. A site drawing is wider than a phone, and the page
+   body must never scroll sideways. */
+.map {
+    overflow: auto;
+    max-height: 70vh;
+    margin-bottom: 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
+
+.map svg {
+    display: block;
+    max-width: none;
+}
+
+/* His own spot. The accent, with a dark outline rather than white text on it —
+   Rodeo Orange takes dark, never white (spec 9.1). */
+.map .map__me {
+    fill: var(--accent);
+    stroke: var(--ink);
+    stroke-width: 2;
+}
+
+/* Everyone else in his group, in a secondary colour (spec 11.4). */
+.map .map__mate {
+    fill: var(--rodeo-dust);
+    stroke: var(--rodeo-brown);
+    stroke-width: 1.5;
+}
+
+/* The key beneath it. Both marks are shapes as well as colours, because a
+   legend that is colour alone is one nobody can use in direct sunlight. */
+.map__key {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.15rem;
+    vertical-align: -2px;
+    border-radius: 3px;
+}
+
+.map__key--me {
+    background: var(--accent);
+    border: 2px solid var(--ink);
+}
+
+.map__key--mate {
+    background: var(--rodeo-dust);
+    border: 2px dashed var(--rodeo-brown);
+}

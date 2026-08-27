@@ -33,7 +33,7 @@ final class Roster
     {
         return $this->db->all(
             'SELECT u.id, u.first_name, u.last_name, u.phone, u.phone_e164,
-                    p.label AS position, pp.is_critical
+                    p.label AS position, p.map_ref, pp.is_critical
              FROM assignment a
              JOIN `user` u ON u.id = a.user_id
              JOIN position p ON p.id = a.position_id

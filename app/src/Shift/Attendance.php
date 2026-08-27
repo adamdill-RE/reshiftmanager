@@ -203,7 +203,7 @@ final class Attendance
     public function assignments(int $shiftId, int $userId): array
     {
         $rows = $this->db->all(
-            'SELECT a.phase, a.is_inherited, p.label AS position, p.definition,
+            'SELECT a.phase, a.is_inherited, p.label AS position, p.definition, p.map_ref,
                     g.id AS group_id, g.label AS group_label, pp.is_critical
              FROM assignment a
              JOIN position p ON p.id = a.position_id

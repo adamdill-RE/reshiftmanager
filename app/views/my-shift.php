@@ -114,6 +114,18 @@ $call = static function (array $person) use ($app): string {
     </div>
 <?php endif; ?>
 
+<?php
+// Spec 6.5: a quick link to the Tarmac Map with his own position highlighted.
+// Offered whether or not the drawing has arrived — the screen behind it says
+// plainly that it has not, and a link that vanishes is one nobody knows to ask
+// about.
+?>
+<p>
+    <a class="button button--quiet" href="<?= e($app->url('map' . ($shift === null ? '' : '?shift=' . (int) $shift['id']))) ?>">
+        Tarmac Map
+    </a>
+</p>
+
 <h2>Lunch</h2>
 
 <form method="post" action="<?= e($url) ?>" data-offline="lunch">

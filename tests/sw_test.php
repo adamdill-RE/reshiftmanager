@@ -106,12 +106,13 @@ test('the polling endpoint is never cacheable', function (): void {
     assertTrue(in_array($app->url('logout'), $never, true), 'logout');
 });
 
-test('the cached pages are the two the spec asks to work offline', function (): void {
-    // Spec 6.5 caches My Shift Status entirely; spec 6.4 has check in and out
-    // working fully offline. Each entry is HTML rendered for one person, so
-    // this list is also the list that has to be cleared on sign-out — it is
-    // meant to stay short and to be noticed when it grows.
-    assertSame(['my-shift', 'check-in'], Shell::PAGES);
+test('the cached pages are the ones the spec asks to work offline', function (): void {
+    // Spec 6.5 caches My Shift Status entirely; 6.4 has check in and out
+    // working fully offline; 10.3 names the tarmac map. Each entry is HTML
+    // rendered for one person, so this list is also the list that has to be
+    // cleared on sign-out — it is meant to stay short and to be noticed when
+    // it grows.
+    assertSame(['my-shift', 'check-in', 'map'], Shell::PAGES);
 });
 
 // ---------------------------------------------------------------------------

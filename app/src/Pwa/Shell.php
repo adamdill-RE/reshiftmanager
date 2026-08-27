@@ -34,9 +34,11 @@ final class Shell
      * volunteer's shift ends up on screen for the next man to use the phone.
      *
      * Spec 6.5: My Shift Status renders with zero connectivity. Spec 6.4:
-     * check in and out works fully offline.
+     * check in and out works fully offline. And the map, which spec 10.3 names
+     * directly — it is the screen most likely to be wanted in the one place
+     * there is no signal, by the man least likely to know his way around.
      */
-    public const PAGES = ['my-shift', 'check-in'];
+    public const PAGES = ['my-shift', 'check-in', 'map'];
 
     /**
      * Every shipped asset, as the versioned URL the pages actually request.

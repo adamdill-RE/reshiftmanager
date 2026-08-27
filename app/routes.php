@@ -456,6 +456,22 @@ $router->get('api/state', static function (App $app, Request $request): Response
     ]));
 });
 
+// ---------------------------------------------------------------------------
+// The Tarmac Map (spec 6.5, 11.4)
+//
+// The drawing is content Rodeo Express still owes. The viewer is built around
+// its absence — see Resm\TarmacMap for the contract the real file drops into.
+// ---------------------------------------------------------------------------
+
+$router->get('map', static function (App $app, Request $request): Response {
+    $user = $app->user();
+    if ($user === null) {
+        return Response::redirect($app->url('login'));
+    }
+
+    return Response::html(mapPage($app, $user, $request));
+});
+
 $router->get('my-shifts', static function (App $app, Request $request): Response {
     $user = $app->user();
     if ($user === null) {
@@ -1514,6 +1530,75 @@ function myShiftPage(
         'error' => $error,
         'notice' => ($request?->input('done') !== null) ? 'Saved.' : null,
         'back' => ['url' => $app->url(), 'label' => 'Menu'],
+    ]);
+}
+
+/**
+ * The map screen.
+ *
+ * Built from the same resolution as My Shift Status — his shift, his
+ * assignment, his group — because spec 6.5 wants the map to show where HE is
+ * standing, with everyone else in his group in a secondary colour. Without an
+ * assignment there is nothing to highlight, and the screen says so rather than
+ * showing an unmarked drawing and letting him hunt.
+ */
+function mapPage(App $app, Resm\Auth\Identity $user, ?Request $request = null): string
+{
+    $season = adminSeasons($app)->active();
+    $seasonId = $season === null ? 0 : (int) $season['id'];
+    $shifts = currentShift($app);
+
+    $resolved = $season === null
+        ? ['current' => null, 'candidates' => [], 'doubled' => false]
+        : $shifts->forUser($user->id, $seasonId);
+
+    $shift = $resolved['current'];
+    $wanted = (string) ($request?->input('shift', '') ?? '');
+    if ($wanted !== '' && $season !== null) {
+        $picked = $shifts->pick($user->id, $seasonId, (int) $wanted);
+        if ($picked !== null) {
+            $shift = $picked;
+        }
+    }
+
+    $assignment = null;
+    $mates = [];
+
+    if ($shift !== null) {
+        $assignment = attendance($app)->assignments((int) $shift['id'], $user->id)[(string) $shift['current_phase']] ?? null;
+
+        if ($assignment !== null) {
+            $mates = (new Roster($app->db()))->groupMates(
+                (int) $shift['id'],
+                (string) $shift['current_phase'],
+                $user->id,
+                (int) $assignment['group_id']
+            );
+        }
+    }
+
+    // Only refs the drawing could actually address. A row with no map_ref, or
+    // one somebody typed a space into, means no highlight rather than a
+    // selector that breaks the whole screen.
+    $mateRefs = [];
+    foreach ($mates as $mate) {
+        $ref = Resm\TarmacMap::ref(isset($mate['map_ref']) ? (string) $mate['map_ref'] : null);
+        if ($ref !== null) {
+            $mateRefs[] = $ref;
+        }
+    }
+
+    return (new View($app))->render('map', [
+        'title' => 'Tarmac Map',
+        'shift' => $shift,
+        'assignment' => $assignment,
+        'svg' => Resm\TarmacMap::read($app),
+        'needed' => Resm\TarmacMap::needed(),
+        'me' => Resm\TarmacMap::ref($assignment === null ? null : (string) ($assignment['map_ref'] ?? '')),
+        'mates' => $mateRefs,
+        'pollShift' => $shift === null ? null : (int) $shift['id'],
+        'scripts' => ['js/map.js'],
+        'back' => ['url' => $app->url('my-shift'), 'label' => 'My Shift Status'],
     ]);
 }
 
