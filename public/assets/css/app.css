@@ -1296,12 +1296,101 @@ textarea.field__input {
     max-width: none;
 }
 
+/* The drawing itself. tarmac.svg is generated (bin/gen-tarmac-map.php) with
+   classes and no styling of its own: the page's CSP is style-src 'self', so
+   an inline style could not apply anyway — and taking every colour from the
+   theme tokens here is what makes the drawing follow the dark theme. */
+.map svg text {
+    font-size: 15px;
+}
+
+.map .tmap-tent {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 3;
+}
+
+.map .tmap-zone-a { fill: var(--surface-raised); }
+.map .tmap-zone-b { fill: var(--surface); }
+
+.map .tmap-lanes {
+    fill: var(--surface-sunken);
+}
+
+.map .tmap-lane-line {
+    stroke: var(--border);
+    stroke-width: 1.5;
+    stroke-dasharray: 7 7;
+    fill: none;
+}
+
+.map .tmap-bldg {
+    fill: var(--surface-sunken);
+    stroke: var(--border);
+    stroke-width: 1.5;
+}
+
+/* Ground beyond the drawing (Naomi, Curve, Holly Hall) and the approximate
+   GB/LT area: dashed, so nobody reads them as surveyed. */
+.map .tmap-off {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1.5;
+    stroke-dasharray: 9 6;
+}
+
+.map .tmap-label {
+    fill: var(--text);
+    font-weight: 600;
+}
+
+.map .tmap-sublabel {
+    fill: var(--text-muted);
+    font-size: 12px;
+}
+
+.map .tmap-arrow {
+    stroke: var(--text-muted);
+    stroke-width: 2;
+    fill: none;
+}
+
+.map .tmap-arrowhead {
+    fill: var(--text-muted);
+}
+
+.map .tmap-walk {
+    stroke: var(--text-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 6;
+    fill: none;
+}
+
+/* A position nobody in view holds. Quiet, but present — an outline the
+   highlights below can replace. */
+.map .pos {
+    fill: var(--surface-sunken);
+    stroke: var(--text-muted);
+    stroke-width: 1.25;
+}
+
+/* The tiny number that tells Runner 3 from Runner 1 inside a cluster. */
+.map .pos-num {
+    fill: var(--text-muted);
+    font-size: 8px;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
 /* His own spot. The accent, with a dark outline rather than white text on it —
    Rodeo Orange takes dark, never white (spec 9.1). */
 .map .map__me {
     fill: var(--accent);
     stroke: var(--ink);
     stroke-width: 2;
+    /* Grows his circle beyond the crowd — r is a geometry property on SVG
+       circles, which is exactly what the markers are. */
+    r: 11;
 }
 
 /* Everyone else in his group, in a secondary colour (spec 11.4). */
@@ -1309,6 +1398,7 @@ textarea.field__input {
     fill: var(--rodeo-dust);
     stroke: var(--rodeo-brown);
     stroke-width: 1.5;
+    r: 8;
 }
 
 /* The key beneath it. Both marks are shapes as well as colours, because a
