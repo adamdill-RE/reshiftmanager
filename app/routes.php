@@ -953,6 +953,72 @@ $router->get('admin/import/errors', static function (App $app, Request $request)
         ->withHeader('X-Robots-Tag', 'noindex, nofollow');
 });
 
+// ---------------------------------------------------------------------------
+// Export Roster (spec 6.10.4)
+//
+// The one screen that hands personal data out in bulk (spec 10.5): the guard
+// is the capability, which Access grants to Admins only, and it is on the CSV
+// endpoint itself — not just the page that links to it.
+// ---------------------------------------------------------------------------
+
+$router->get('admin/export', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $season = adminSeasons($app)->active();
+    $export = rosterExport($app);
+
+    $shift = null;
+    $rows = [];
+    $error = null;
+
+    $requested = $request->input('shift');
+    if ($season !== null && $requested !== null) {
+        $shift = $export->shift((int) $requested);
+        if ($shift === null) {
+            $error = 'That shift does not exist, or is older than the five-year retention window.';
+        } else {
+            $rows = $export->rows($shift);
+        }
+    }
+
+    return Response::html((new View($app))->render('admin/export', [
+        'title' => 'Export Roster',
+        'season' => $season,
+        'shifts' => $season === null ? [] : $export->shifts(),
+        'shift' => $shift,
+        'rows' => $rows,
+        'error' => $error,
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]));
+});
+
+$router->get('admin/export/csv', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::ImportExportRoster);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $export = rosterExport($app);
+    $shift = $export->shift((int) $request->input('shift', '0'));
+    if ($shift === null) {
+        return notFoundResponse($app);
+    }
+
+    /*
+     * The BOM is for Excel, which otherwise guesses the encoding of a plain
+     * CSV and mangles every name with an accent. Import strips it back off
+     * (Csv::rows), so the round trip is unharmed.
+     */
+    return Response::text("\xEF\xBB\xBF" . $export->csv($shift, $export->rows($shift)))
+        ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+        ->withHeader('Content-Disposition', 'attachment; filename="' . $export->filename($shift) . '"')
+        ->withHeader('Cache-Control', 'no-store')
+        ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+});
+
 /*
  * Admin sections the build sequence has not reached, behind the same guard the
  * real screen will use.
@@ -1285,6 +1351,15 @@ function shiftsPage(
         'scripts' => ['js/shift-form.js'],
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
     ]);
+}
+
+function rosterExport(App $app): Resm\Admin\RosterExport
+{
+    return new Resm\Admin\RosterExport(
+        $app->db(),
+        $app->displayTimezone(),
+        $app->config->int('retention.seasons_years', 5),
+    );
 }
 
 function rosterImport(App $app): RosterImport

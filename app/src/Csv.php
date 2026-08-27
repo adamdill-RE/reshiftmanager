@@ -76,6 +76,32 @@ final class Csv
     }
 
     /**
+     * Neutralise a cell Excel would execute rather than display.
+     *
+     * A last name is free text, and Excel treats a cell starting with =, +, -
+     * or @ as a formula — so a roster row named "=HYPERLINK(...)" becomes code
+     * that runs on the machine of whoever opens the export. Prefixing a single
+     * quote makes Excel display the text verbatim; the quote does not survive
+     * into the cell value.
+     *
+     * Phone numbers legitimately start with + and a spreadsheet-negative
+     * number with -, so anything that is only digits and phone punctuation is
+     * left alone: a formula needs more than those characters to do anything.
+     */
+    public static function guard(string $value): string
+    {
+        if ($value === '' || !str_contains('=+-@', $value[0])) {
+            return $value;
+        }
+
+        if (preg_match('/^[+\-][0-9 ().\/x#+\-]*$/', $value) === 1) {
+            return $value;
+        }
+
+        return "'" . $value;
+    }
+
+    /**
      * One CSV line, for the error report the Admin downloads.
      *
      * @param array<int, string|int> $fields

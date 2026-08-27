@@ -75,10 +75,9 @@ final class AdminMenu
             'label' => 'Export Roster',
             'sub' => 'CSV, per shift',
             'capability' => Capability::ImportExportRoster,
-            'built' => false,
-            'summary' => 'Names, Member IDs, check-in and check-out times, last assigned '
-                . 'position in each phase, and certified skills.',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'matrix' => [
             'label' => 'Position Matrix Editor',
