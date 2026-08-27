@@ -254,20 +254,27 @@ neither the counts nor the record lies.
 
 ### The tarmac map, and what is still owed
 
-The tarmac map arrived in August 2026 — as a description of the ground
-rather than a site plan, and it ships as a generated schematic:
-`bin/gen-tarmac-map.php` draws `public/assets/map/tarmac.svg` from the
-committee's layout (tent, seven bus lanes, six stop bands north to south,
-back gates east, support crew west, the Bus Ops complex and committee gate
-north, Naomi and Curve/Holly Hall as call-outs beyond the drawing). Every
-one of the 98 positions is one SVG element whose id equals that position's
-`map_ref` (migration 008), My Shift Status highlights the user's own spot
-with his group in a secondary colour, and `tests/map_test.php` pins the
-id contract from both sides. To move a marker when the committee corrects
-a placement: edit the generator, rerun it with `--out`, recommit — the ids
-never change, so the database is untouched. A handful of placements are
-explicitly approximate (GB/LT, Unload, the Bus Callers) and are drawn or
-flagged as such.
+The tarmac map arrived in August 2026 — first as a written description,
+then as the committee's sketch that fixed the compass — and it ships as a
+generated schematic: `bin/gen-tarmac-map.php` draws
+`public/assets/map/tarmac.svg` from that layout. North up, the tent runs
+north–south (which suits a phone held upright): the seven numbered stops
+run up the tent from the Bus Ops complex at the south end — Reed nearest
+the office, Gold Badge / LT at the top, the lone bathroom against the
+north end. Guests come in on the west side through the Overheads / Tent
+Entrance lines, line up in the outside queue areas along the west wall,
+and enter each stop through its back gates; the seven bus lanes run along
+the east side with the starters and Bus Callers in them and the
+computers/counters/runners between tent and lanes. The committee gate
+sits beyond the complex; Holly Hall (with Curve) and Naomi are call-outs
+beyond the drawing to the northeast and southeast. Every one of the 98 positions is one SVG
+element whose id equals that position's `map_ref` (migration 008), My
+Shift Status highlights the user's own spot with his group in a secondary
+colour, and `tests/map_test.php` pins the id contract from both sides. To
+move a marker when the committee corrects a placement: edit the
+generator, rerun it with `--out`, recommit — the ids never change, so the
+database is untouched. Placements still unconfirmed: the Unload cluster
+and Curve's exact spot, both flagged on the drawing itself.
 
 The "What's this?" definitions are part-received: 57 of 98 positions carry
 write-ups scraped from the 2026 Committee Handbook (starters, computers,
