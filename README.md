@@ -252,16 +252,28 @@ between them is the only thing that exposes a handset set wrong. A claimed time
 is clamped to the shift and to now, and the raw claim goes to the audit log, so
 neither the counts nor the record lies.
 
-### Still owed by Rodeo Express
+### The tarmac map, and what is still owed
 
-The tarmac map SVG has the longest lead time of anything outstanding — 98
-positions have to be marked on a site plan first. The viewer is built and ships
-a plainly-labelled placeholder; the drawing drops in at
-`public/assets/map/tarmac.svg` with each position's element id matching its
-`map_ref`, and nothing else changes. There is deliberately no drawn-in tarmac:
-a made-up layout would look finished and send a new committeeman confidently to
-the wrong place.
+The tarmac map arrived in August 2026 — as a description of the ground
+rather than a site plan, and it ships as a generated schematic:
+`bin/gen-tarmac-map.php` draws `public/assets/map/tarmac.svg` from the
+committee's layout (tent, seven bus lanes, six stop bands north to south,
+back gates east, support crew west, the Bus Ops complex and committee gate
+north, Naomi and Curve/Holly Hall as call-outs beyond the drawing). Every
+one of the 98 positions is one SVG element whose id equals that position's
+`map_ref` (migration 008), My Shift Status highlights the user's own spot
+with his group in a secondary colour, and `tests/map_test.php` pins the
+id contract from both sides. To move a marker when the committee corrects
+a placement: edit the generator, rerun it with `--out`, recommit — the ids
+never change, so the database is untouched. A handful of placements are
+explicitly approximate (GB/LT, Unload, the Bus Callers) and are drawn or
+flagged as such.
 
-Also owed: the "What's this?" position definitions (`position.definition`) and
-the Rodeo Information copy (spec 6.8), both of which the screens already make
-room for.
+The "What's this?" definitions are part-received: 57 of 98 positions carry
+write-ups scraped from the 2026 Committee Handbook (starters, computers,
+counters, the crosswalks and bridge, the committee gate). The other 41 stay
+NULL on purpose and the screens keep saying the write-up is owed — filler
+would hide that the deliverable is still part-open.
+
+Still owed: the remaining definitions, and the Rodeo Information copy
+(spec 6.8), which the menu already makes room for.
