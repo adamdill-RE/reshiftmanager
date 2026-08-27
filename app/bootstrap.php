@@ -44,7 +44,7 @@ spl_autoload_register(static function (string $class): void {
 
 require RESM_ROOT . '/app/helpers.php';
 
-$app = \Resm\App::boot(RESM_ROOT);
+$app = \Resm\App::boot(RESM_ROOT, defined('RESM_PUBLIC_ROOT') ? RESM_PUBLIC_ROOT : null);
 
 // display_errors is off on the server and log_errors on, writing to
 // /home/reshiftmanager/logs/php.error.log. Keep it that way in production and

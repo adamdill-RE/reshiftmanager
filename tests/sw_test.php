@@ -115,6 +115,32 @@ test('the cached pages are the ones the spec asks to work offline', function ():
     assertSame(['my-shift', 'check-in', 'map'], Shell::PAGES);
 });
 
+test('the shell finds its assets when public/ is not under the app root', function (): void {
+    // The deploy puts app/ at ~/resm-app/ and public/ at ~/public_html/resm/.
+    // They are never nested there, only in a checkout — so every one of these
+    // silently found NOTHING on the server: an empty precache list, a version
+    // that was the hash of the empty string, and asset URLs with no ?v= stamp
+    // against a one-year expiry. The app kept working online and cached
+    // nothing, which is the failure that looks like success.
+    $root = dirname(__DIR__);
+    $app = App::boot($root, $root . '/public');
+
+    $assets = Shell::assets($app);
+    assertTrue($assets !== [], 'the precache list must not be empty');
+
+    // The hash of the empty string, i.e. "found no assets at all".
+    assertTrue(
+        Shell::version($app) !== substr(hash('sha256', ''), 0, 12),
+        'the version must be built from real files'
+    );
+
+    assertTrue(str_contains($app->asset('css/app.css'), '?v='), 'assets must still be stamped');
+    assertTrue(
+        str_starts_with(Resm\TarmacMap::path($app), $root . '/public/'),
+        'the map is looked for under the real public root'
+    );
+});
+
 // ---------------------------------------------------------------------------
 // The deploy story
 // ---------------------------------------------------------------------------

@@ -47,7 +47,7 @@ final class Shell
      */
     public static function assets(App $app): array
     {
-        $root = $app->root . '/public/assets';
+        $root = $app->publicPath('assets');
         if (!is_dir($root)) {
             return [];
         }
@@ -86,7 +86,7 @@ final class Shell
     {
         $material = implode("\n", self::assets($app));
 
-        $worker = $app->root . '/public/sw.js';
+        $worker = $app->publicPath('sw.js');
         if (is_file($worker)) {
             $material .= "\n" . filemtime($worker);
         }

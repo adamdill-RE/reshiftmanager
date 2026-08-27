@@ -36,7 +36,7 @@ final class TarmacMap
 
     public static function path(App $app): string
     {
-        return $app->root . '/public/assets/' . self::FILE;
+        return $app->publicPath('assets/' . self::FILE);
     }
 
     public static function isAvailable(App $app): bool

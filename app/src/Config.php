@@ -53,7 +53,7 @@ final class Config
 
         $local = $configDir . '/config.local.php';
         if (is_file($local)) {
-            $overrides = require $local;
+            $overrides = self::readLocal($local);
 
             // An empty file is the usual cause: require returns int(1) for
             // one, and without this check that became an uncaught TypeError
@@ -81,6 +81,38 @@ final class Config
         }
 
         return new self($values);
+    }
+
+    /**
+     * Read config.local.php, turning a syntax error into something readable.
+     *
+     * This is the only PHP file on the server that is edited by hand, by an
+     * administrator, in cPanel's File Manager - it holds the database password
+     * and the keys, so it is not in git and the deploy never overwrites it.
+     * There is no shell on that account, so there is nothing to lint it with
+     * and no way to find out what went wrong except the error log.
+     *
+     * A missing comma there is a PHP parse error, which takes down every page
+     * on the site with an empty 500 and no clue on screen. That has happened.
+     * A ParseError from require IS catchable, so it becomes the same kind of
+     * message the empty-file case below already gets: what is wrong, and which
+     * line to go and look at.
+     *
+     * @throws ConfigurationError
+     */
+    private static function readLocal(string $file): mixed
+    {
+        try {
+            return require $file;
+        } catch (\ParseError $e) {
+            throw new ConfigurationError(sprintf(
+                'config.local.php has a syntax error on line %d: %s. '
+                . 'A missing comma at the end of the line ABOVE is the usual '
+                . 'cause - every entry in the array needs one, including the last.',
+                $e->getLine(),
+                $e->getMessage()
+            ));
+        }
     }
 
     public function get(string $key, mixed $default = null): mixed

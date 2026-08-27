@@ -78,6 +78,20 @@ route is the only way to apply them. Check what is pending with
 then add `setup_key` back to `config.local.php` through cPanel File Manager,
 visit `/resm/setup?key=…`, apply, and remove the line again.
 
+**`config.local.php` is PHP, and a typo in it takes the whole site down.** It
+is the one file edited by hand on a server with no shell to lint it. Every
+entry needs a trailing comma — including the last one — and a missing comma is
+a parse error, not a warning:
+
+```php
+'status_key' => 'abc',   ← this comma is not optional
+'debug' => false,
+```
+
+Get it wrong and every page returns 500. The application catches that case and
+prints which line to fix, so read the page rather than the error log; if even
+that does not appear, the file is unreadable or the app directory is missing.
+
 The CLI equivalents — `php bin/migrate.php --status` and `php bin/migrate.php`
 from `~/resm-app` — are the better path on any host that has a shell. This one
 does not, so they are for local development and for a future move.

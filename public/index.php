@@ -54,6 +54,14 @@ if ($appRoot === null) {
  * page went blank, so this one class of error is reported on screen. The
  * message names the file and the problem and never a credential.
  */
+/*
+ * This directory IS public/. On the server it is public_html/resm/ and the
+ * application is at ~/resm-app/, so nothing downstream can work it out from
+ * the application root - and every asset URL and precached file depends on
+ * getting it right.
+ */
+define('RESM_PUBLIC_ROOT', __DIR__);
+
 try {
     /** @var Resm\App $app */
     $app = require $appRoot . '/app/bootstrap.php';

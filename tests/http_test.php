@@ -155,6 +155,47 @@ test('an empty config.local.php is reported, not a blank page', function (): voi
     }
 });
 
+test('a syntax error in config.local.php names the line, not a blank 500', function (): void {
+    // What actually happened on the server, 27 August: a missing comma while
+    // adding setup_key by hand in File Manager. config.local.php is the one
+    // PHP file an administrator edits directly, it is not in git, and that
+    // account has no shell to lint it with - so a parse error there took down
+    // every page on the site with an empty 500 and nothing on screen.
+    //
+    // A ParseError from require is catchable, which is what makes this
+    // reportable at all.
+    $dir = sys_get_temp_dir() . '/resm-cfg-' . bin2hex(random_bytes(4));
+    mkdir($dir);
+    copy(dirname(__DIR__) . '/config/config.php', $dir . '/config.php');
+    file_put_contents($dir . '/config.local.php', <<<'BROKEN'
+        <?php
+
+        return [
+            'app' => [
+                'status_key' => 'abc'
+                'debug' => false,
+            ],
+        ];
+        BROKEN);
+
+    try {
+        assertThrows(Resm\ConfigurationError::class, static fn () => Config::load($dir));
+
+        try {
+            Config::load($dir);
+        } catch (Resm\ConfigurationError $e) {
+            assertTrue(str_contains($e->getMessage(), 'config.local.php'), 'names the file');
+            assertTrue(str_contains($e->getMessage(), 'syntax error'), 'says what kind of problem');
+            assertTrue(str_contains($e->getMessage(), 'line 6'), 'names the line: ' . $e->getMessage());
+            assertTrue(str_contains($e->getMessage(), 'comma'), 'names the usual cause');
+        }
+    } finally {
+        @unlink($dir . '/config.php');
+        @unlink($dir . '/config.local.php');
+        @rmdir($dir);
+    }
+});
+
 test('a valid config.local.php still overrides normally', function (): void {
     $dir = sys_get_temp_dir() . '/resm-cfg-' . bin2hex(random_bytes(4));
     mkdir($dir);

@@ -17,12 +17,34 @@ final class App
     private function __construct(
         public readonly Config $config,
         public readonly string $root,
+        private readonly string $publicRoot,
     ) {
     }
 
-    public static function boot(string $root): self
+    /**
+     * $publicRoot is where public/ ACTUALLY is, which is not under $root on
+     * the server: app/ deploys to ~/resm-app/ and public/ to
+     * ~/public_html/resm/, so they are siblings of a sort and never nested.
+     * The front controller is the one thing that knows - it IS that directory
+     * - so it says so, and everything that reaches for a shipped file asks
+     * here rather than assuming.
+     *
+     * Left null (CLI, tests, anything run from the repository) it falls back
+     * to $root/public, which is where the file actually is in a checkout.
+     */
+    public static function boot(string $root, ?string $publicRoot = null): self
     {
-        return new self(Config::load($root . '/config'), $root);
+        return new self(
+            Config::load($root . '/config'),
+            $root,
+            $publicRoot ?? $root . '/public',
+        );
+    }
+
+    /** An absolute path to a file that shipped in public/. */
+    public function publicPath(string $relative = ''): string
+    {
+        return rtrim($this->publicRoot, '/') . ($relative === '' ? '' : '/' . ltrim($relative, '/'));
     }
 
     public function db(): Database
@@ -96,7 +118,7 @@ final class App
         $relative = 'assets/' . ltrim($path, '/');
         $url = $this->url($relative);
 
-        $file = $this->root . '/public/' . $relative;
+        $file = $this->publicPath($relative);
         if (is_file($file)) {
             $url .= '?v=' . filemtime($file);
         }
