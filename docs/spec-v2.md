@@ -831,7 +831,7 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | ~~4~~ | **Answered.** 39 positions, Section 8.3, and criticality does not differ between phases. Reed Road carries a single critical Computer and Counter for the group rather than one per gate: Reed and Employee can run from one gate when short, which is a management change on the ground rather than a second critical pair. |
 | ~~5~~ | **Answered.** It happens, and the resolution rule is in Section 5.5. Current shift is the one he is checked into and has not left, ended shifts excluded; ties go to the earlier start and are shown as a double. Check-out is what moves him on, not the clock, and it vacates his old position in the same moment. The officer taking him on is warned (6.9.4 rule 7). |
 | ~~6~~ | **Answered — no.** "Whatever keeps the UI clean", and the assign board is already the densest screen in the application. The 5.3 window opens the next shift at midnight anyway, and an officer who stays on simply becomes current on it, so a second shift's data on that screen buys little for what it costs. |
-| 7 | Retention: how many seasons of history should stay live before archival? |
+| ~~7~~ | **Answered.** Five years. Seasons stay live and queryable for five years before archival, so the audit log (6.10.9) and the export (6.10.4) range over that window rather than over everything ever recorded, and anything older is a candidate for archival rather than for deletion — the audit trail is evidence and nothing in the application offers to remove a row from it. |
 | 8 | Is there a Rodeo Express or committee logo to use in place of the wordmark on the login screen? |
 
 *End of specification, version 2.0*

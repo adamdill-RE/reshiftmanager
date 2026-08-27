@@ -239,3 +239,16 @@ test('the escaping helper handles quotes and null', function (): void {
     assertSame('O&#039;Brien', e("O'Brien"));
     assertSame('', e(null));
 });
+
+test('the retention window is configured, and is a query bound not a delete', function (): void {
+    // Spec 11.5 #7, answered 27 August: five years. The audit log and the
+    // export range over that rather than over everything ever recorded.
+    //
+    // Pinned here for the same reason the poll intervals were pinned before
+    // the polling layer existed: phase 6 builds against this number, and a
+    // number that quietly changes underneath a report is worse than one that
+    // was never there.
+    $config = Config::load(dirname(__DIR__) . '/config');
+
+    assertSame(5, $config->int('retention.seasons_years'));
+});

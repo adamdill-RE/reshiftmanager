@@ -95,6 +95,19 @@ return [
         'lockout_seconds'        => 60,
     ],
 
+    // Spec 11.5 #7, answered: five years. Seasons stay live and queryable for
+    // this long before archival, which is the window the audit log (6.10.9)
+    // and the export (6.10.4) range over rather than over everything ever
+    // recorded.
+    //
+    // It bounds a QUERY, never a delete. audit_log is append-only and is
+    // evidence; nothing in this application offers to remove a row from it,
+    // and anything past this window is a candidate for archival by someone
+    // who has decided to archive it.
+    'retention' => [
+        'seasons_years' => 5,
+    ],
+
     'poll' => [
         // Spec 10.2. Held-open connections are impossible under CloudLinux LVE,
         // so clients short-poll a state_version integer instead.
