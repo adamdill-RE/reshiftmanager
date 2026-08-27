@@ -803,14 +803,16 @@ Two officers will assign at the same time. The server is the sole authority.
 
 | Item | Detail needed |
 | --- | --- |
-| "What's this?" definitions | One or two sentences per position, or per position family where positions are interchangeable (e.g. one definition covering Naomi Bridge 1–6). Roughly 30–40 distinct write-ups rather than 98. |
-| Tarmac map | See Section 11.4 below. |
-| Rodeo Information | Content structure and copy for the menu. |
+| "What's this?" definitions | **Part-received, August 2026.** 57 of 98 positions carry write-ups scraped from the 2026 Committee Handbook (starters, computers, counters, the crosswalks and bridge, the committee gate) — migration 008. The other 41 stay NULL and the screens keep saying the write-up is owed. Still wanted: the remaining families (runners, back gates, overheads, bus callers, Curve, GB/LT). |
+| ~~Tarmac map~~ | **Received, August 2026** — as a description of the ground rather than a site plan; `bin/gen-tarmac-map.php` draws the schematic from it. See Section 11.4. |
+| Rodeo Information | Content structure and copy for the menu. Deferred by Rodeo Express to a later phase. |
 | ~~Critical position review~~ | **Received.** 39 critical positions, Section 8.3. Criticality does not differ between phases. |
 | ~~Default active groups~~ | **Received.** All ten groups, every shift type; see Section 5.4. |
 | ~~Skill mapping confirmation~~ | **Received.** Ten skills in two kinds, and the position mapping rule; Section 7. |
 
 ### 11.4 Tarmac map — what to supply
+
+> **Received, August 2026.** Rodeo Express supplied the layout as a written description — tent roughly 800 ft by 150 ft, seven bus lanes west, six stop bands north to south (Reed, OST, Special Events & Woodlands, West Loop, Monroe, Maxey), back gates east, support crew just outside the west wall, starters in the lanes even with their stops, overheads at the southeast entrance, the Bus Ops complex and committee gate north, Naomi and Curve/Holly Hall beyond the drawing. `bin/gen-tarmac-map.php` generates `public/assets/map/tarmac.svg` from it; a few placements the description did not fix (GB/LT, Unload, the Bus Callers) are approximate and revised by editing the generator and rerunning it. The requirements below stay as the contract any future replacement drawing must meet.
 
 The map should be a vector SVG rather than a photograph or PDF, so it stays sharp at any zoom, loads in a few kilobytes, and can highlight a user's own position. What is needed:
 
@@ -832,6 +834,6 @@ Once supplied, each position becomes an addressable SVG element, and My Shift St
 | ~~5~~ | **Answered.** It happens, and the resolution rule is in Section 5.5. Current shift is the one he is checked into and has not left, ended shifts excluded; ties go to the earlier start and are shown as a double. Check-out is what moves him on, not the clock, and it vacates his old position in the same moment. The officer taking him on is warned (6.9.4 rule 7). |
 | ~~6~~ | **Answered — no.** "Whatever keeps the UI clean", and the assign board is already the densest screen in the application. The 5.3 window opens the next shift at midnight anyway, and an officer who stays on simply becomes current on it, so a second shift's data on that screen buys little for what it costs. |
 | ~~7~~ | **Answered — five years.** Seasons stay live and queryable for five years before archival; the audit log and the export range over that window. It bounds a query and never a delete: anything older is a candidate for archival by somebody who has decided to archive it, not something the software does on its own. In configuration as `retention.seasons_years`. |
-| 8 | Is there a Rodeo Express or committee logo to use in place of the wordmark on the login screen? |
+| ~~8~~ | **Answered — the wordmark stays.** Rodeo Express confirmed in August 2026 that the login wordmark and generated icon set work as they are. If a committee mark arrives later it drops into the login view and `bin/gen-icons.php` regenerates the icons from one edit. |
 
 *End of specification, version 2.0*
