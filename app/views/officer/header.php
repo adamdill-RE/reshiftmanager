@@ -72,6 +72,18 @@ $shiftId = $shift === null ? null : (int) $shift['id'];
     <?php return; ?>
 <?php endif; ?>
 
+<?php
+// Spec 10.4: two officers will assign at the same time, and the server is the
+// sole authority. His own writes redirect and re-render, so this is only ever
+// somebody ELSE's change. A bar he can act on rather than a reload that
+// happens under his thumb — an officer three taps into placing a man does not
+// want the page pulled out from under him.
+?>
+<p class="board-moved" role="status" data-board-moved hidden>
+    <span>Someone else has changed this board.</span>
+    <button class="button" type="button" data-board-refresh>Refresh</button>
+</p>
+
 <p class="muted">
     <strong><?= e((string) $shift['team_name']) ?></strong> &middot;
     <?= e($clock->display($shift['starts_at_utc'])) ?>

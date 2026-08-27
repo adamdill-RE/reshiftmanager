@@ -1309,3 +1309,27 @@ textarea.field__input {
     background: var(--rodeo-dust);
     border: 2px dashed var(--rodeo-brown);
 }
+
+/* ---------------------------------------------------------------------------
+   "Someone else has changed this board" (spec 10.4)
+   --------------------------------------------------------------------------- */
+
+/* In the flow at the top of the board rather than fixed over it. The officer
+   is mid-task and this is information, not an interruption — it must not cover
+   the row he is reaching for. */
+.board-moved {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--touch-gap);
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    border: 2px solid var(--warn);
+    border-radius: var(--radius);
+    background: var(--warn-surface);
+    font-weight: 600;
+}
+
+.board-moved .button {
+    flex: 0 0 auto;
+}

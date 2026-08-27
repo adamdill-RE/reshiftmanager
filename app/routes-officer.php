@@ -914,9 +914,15 @@ function officerContext(App $app, Request $request, Capability $capability): arr
         ),
         'error' => null,
         'notice' => null,
+        // Which shift these screens poll (spec 10.2). Named explicitly because
+        // the layout otherwise follows the status strip, and an officer is
+        // usually not checked into the shift whose board he is running — so
+        // without this the assign board, of all screens, would be the one that
+        // never noticed anything change.
+        'pollShift' => $shift === null ? null : (int) $shift['id'],
         // The team and shift selectors submit on change. An onchange attribute
         // would be blocked by the CSP (script-src 'self'), so it is a file.
-        'scripts' => ['js/picker.js'],
+        'scripts' => ['js/picker.js', 'js/board.js'],
     ];
 }
 

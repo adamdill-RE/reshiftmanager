@@ -215,3 +215,34 @@ test('closesAt on a shift that does not exist is null, not an exception', functi
         assertSame(null, pollFor($db)->closesAt(99999999));
     });
 });
+
+// ---------------------------------------------------------------------------
+// Which shift a screen polls
+// ---------------------------------------------------------------------------
+
+test('officer screens name their own shift to poll', function (): void {
+    $routes = (string) file_get_contents(dirname(__DIR__) . '/app/routes-officer.php');
+
+    // Read as source because every officer screen funnels through
+    // officerContext, which the suite cannot load without registering the
+    // whole route table — and because the failure is silent. An officer is
+    // usually not checked into the shift whose board he is running, so without
+    // this the layout falls back to his status strip, finds nothing, and the
+    // assign board becomes the one screen in the application that never
+    // notices anything change. Nothing errors; it just stops updating.
+    assertTrue(str_contains($routes, "'pollShift' =>"), 'officerContext must set pollShift');
+    assertTrue(str_contains($routes, "js/board.js"), 'and load the subscriber that acts on it');
+});
+
+test('the layout prefers a named shift over the status strip\'s', function (): void {
+    $layout = (string) file_get_contents(dirname(__DIR__) . '/app/views/layout.php');
+
+    // $pollShift ?? widget — that order, not the reverse. An officer running
+    // team B's board while checked into team C's own shift would otherwise
+    // poll the wrong one and be told nothing had changed, truthfully, about a
+    // shift he was not looking at.
+    assertTrue(
+        (bool) preg_match('/\$pollShift\s*\?\?\s*\(\$widget/', $layout),
+        'the named shift must win over the widget'
+    );
+});
