@@ -152,7 +152,7 @@ $query = static function (array $overrides) use ($app, $filters): string {
         </p>
         <?php $lines = $detail($entry['before_json'], $entry['after_json']); ?>
         <?php if ($lines !== []): ?>
-            <p class="muted card__note">
+            <p class="muted card__note audit-detail">
                 <?php foreach ($lines as $line): ?>
                     <?= e($line) ?><br>
                 <?php endforeach; ?>

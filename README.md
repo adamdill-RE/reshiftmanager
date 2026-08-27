@@ -124,11 +124,16 @@ refuses to run if an applied file has changed. Add a new migration instead.
 A migration that is pure data can opt into a transaction with a `-- resm:atomic`
 line; schema migrations cannot, because MySQL commits implicitly on DDL.
 
-**The position matrix is generated, not typed.** `db/migrations/002_seed_reference.sql`
-comes from `bin/gen-position-seed.php`, which parses section 8.3 of the spec
-and refuses to emit anything unless the counts still come to 98 positions, 157
-position-phase records, 22 radio, 39 critical and 3 multi-assign. After
-go-live, the Position Matrix Editor (spec 6.10.8) edits those tables directly.
+**The position matrix is generated, not typed — and editable after go-live.**
+`db/migrations/002_seed_reference.sql` comes from `bin/gen-position-seed.php`,
+which parses section 8.3 of the spec and refuses to emit anything unless the
+counts still come to 98 positions, 157 position-phase records, 22 radio, 39
+critical and 3 multi-assign. The Position Matrix Editor (spec 6.10.8) now
+edits those tables directly, which ends that guarantee for the live data: what
+replaces it is visibility — every editor write lands in the audit log with its
+before and after, and the editor's header shows the live counts beside the
+seed baseline so drift is announced. The generator still guards the seed
+migrations, which stay the immutable day-one record.
 
 **The database enforces the assignment rules.** Two officers will assign at the
 same time. `assignment` carries two unique indexes over generated columns, so
@@ -183,13 +188,24 @@ rate limit, and it is a decision to revisit if the threat model changes.
 
 ## Where this build stands
 
-Phases 1 to 5 of the build sequence in spec 11.1 are complete: schema and seed
-data, authentication, the Admin Menu, the committeeman experience, the Officer
-Menu, and now the PWA shell, service worker, offline queue and polling layer.
+All six phases of the build sequence in spec 11.1 are complete: schema and
+seed data, authentication, the Admin Menu, the committeeman experience, the
+Officer Menu, the PWA shell with its service worker, offline queue and polling
+layer, and now the Phase 6 screens — Export Roster, the Audit Log, and the
+Position Matrix Editor — with the hardening and load-testing pass
+(`docs/load-testing.md`). Broadcast was listed under phase 6 and shipped with
+Phase 4, because the Officer Menu is where an officer reaches for it.
 
-**Phase 6 is next**: export, audit log, the Position Matrix Editor, hardening
-and load testing. Broadcast was listed there and shipped with Phase 4, because
-the Officer Menu is where an officer reaches for it.
+**Retention is answered** (spec 11.5 #7): five years, in configuration as
+`retention.seasons_years`. It bounds what the audit log and the export range
+over and never deletes anything — `audit_log` is append-only and is evidence,
+and nothing in the application will offer to remove a row from it.
+
+**The export round-trips.** Export Roster writes the spec 6.10.4 columns plus
+Phone, Email and Team, so the file it produces goes straight back through
+Import Roster. Every free-text cell passes `Csv::guard` on the way out — a
+roster row named `=HYPERLINK(...)` must not execute on the machine of exactly
+the person the export is for.
 
 The permission matrix from spec 2.2 is encoded once, in `Resm\Auth\Capability`
 and `Resm\Auth\Access`, and transcribed a second time in `tests/access_test.php`
