@@ -81,12 +81,11 @@ final class AdminMenu
         ],
         'matrix' => [
             'label' => 'Position Matrix Editor',
-            'sub' => '98 positions, 10 groups',
+            'sub' => 'Positions, phases and flags',
             'capability' => Capability::EditPositionMatrix,
-            'built' => false,
-            'summary' => 'Add, rename, reorder, retire and re-flag positions without a code '
-                . 'change. Retiring one keeps the history that points at it.',
-            'phase' => 'Phase 6 of the build sequence (spec 11.1).',
+            'built' => true,
+            'summary' => '',
+            'phase' => '',
         ],
         'audit' => [
             'label' => 'Audit Log',

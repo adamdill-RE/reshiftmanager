@@ -1020,6 +1020,108 @@ $router->get('admin/export/csv', static function (App $app, Request $request): R
 });
 
 // ---------------------------------------------------------------------------
+// Position Matrix Editor (spec 6.10.8)
+// ---------------------------------------------------------------------------
+
+$router->get('admin/matrix', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    return Response::html(matrixPage($app, notice: match ($request->input('done')) {
+        'created' => 'Position created.',
+        'saved' => 'Saved.',
+        'retired' => 'Retired. Every record that points at it is intact.',
+        'restored' => 'Restored.',
+        default => null,
+    }));
+});
+
+$router->get('admin/matrix/edit', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+
+    $matrix = positionMatrix($app);
+
+    $position = null;
+    $id = (int) $request->input('id', '0');
+    if ($id > 0) {
+        $position = $matrix->position($id);
+        if ($position === null) {
+            return notFoundResponse($app);
+        }
+    }
+
+    return Response::html((new View($app))->render('admin/matrix-edit', [
+        'title' => $position === null ? 'Add a position' : 'Edit position',
+        'position' => $position,
+        'groups' => $matrix->groups(),
+        'groupId' => (int) $request->input('group', '0'),
+        'error' => null,
+        'back' => ['url' => $app->url('admin/matrix'), 'label' => 'Position Matrix'],
+    ]));
+});
+
+$router->post('admin/matrix', static function (App $app, Request $request): Response {
+    $user = requireAdmin($app, Capability::EditPositionMatrix);
+    if (!$user instanceof Resm\Auth\Identity) {
+        return $user;
+    }
+    if (!Csrf::check($request->input(Csrf::FIELD))) {
+        return Response::html(matrixPage($app, error: 'That page went stale. Try again.'), 400);
+    }
+
+    $matrix = positionMatrix($app);
+    $id = (int) $request->input('id', '0');
+    $action = $request->input('action');
+
+    // The phase checkboxes arrive nested — phases[unload][present] — which
+    // Request::input rightly refuses to flatten, so they are read raw here.
+    $input = [
+        'label' => $request->input('label', ''),
+        'group_id' => (int) $request->input('group_id', '0'),
+        'sort_order' => (int) $request->input('sort_order', '0'),
+        'is_radio' => $request->input('is_radio') !== null,
+        'phases' => is_array($request->post['phases'] ?? null) ? $request->post['phases'] : [],
+    ];
+
+    $result = match ($action) {
+        'create' => $matrix->create($user, $input),
+        'update' => $matrix->update($user, $id, $input),
+        'retire' => $matrix->retire($user, $id),
+        'restore' => $matrix->restore($user, $id),
+        default => ['ok' => false, 'error' => 'That is not a thing this screen does.', 'id' => null],
+    };
+
+    if ($result['ok']) {
+        return Response::redirect($app->url('admin/matrix?done=' . match ($action) {
+            'create' => 'created',
+            'update' => 'saved',
+            'retire' => 'retired',
+            default => 'restored',
+        }));
+    }
+
+    // Back to the form with the error, keeping what was typed out of scope —
+    // the matrix is small and the form is short.
+    if ($action === 'create' || $action === 'update') {
+        return Response::html((new View($app))->render('admin/matrix-edit', [
+            'title' => $action === 'create' ? 'Add a position' : 'Edit position',
+            'position' => $id > 0 ? $matrix->position($id) : null,
+            'groups' => $matrix->groups(),
+            'groupId' => $input['group_id'],
+            'error' => $result['error'],
+            'back' => ['url' => $app->url('admin/matrix'), 'label' => 'Position Matrix'],
+        ]), 400);
+    }
+
+    return Response::html(matrixPage($app, error: $result['error']), 400);
+});
+
+// ---------------------------------------------------------------------------
 // Audit Log (spec 6.10.9)
 //
 // GET only, deliberately: the log is append-only and is evidence. No POST
@@ -1393,6 +1495,26 @@ function shiftsPage(
         'error' => $error,
         'notice' => $notice === '' ? null : $notice,
         'scripts' => ['js/shift-form.js'],
+        'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
+    ]);
+}
+
+function positionMatrix(App $app): Resm\Admin\PositionMatrix
+{
+    return new Resm\Admin\PositionMatrix($app->db(), new Resm\AuditLog($app->db()));
+}
+
+function matrixPage(App $app, ?string $error = null, ?string $notice = null): string
+{
+    $matrix = positionMatrix($app);
+
+    return (new View($app))->render('admin/matrix', [
+        'title' => 'Position Matrix',
+        'groups' => $matrix->groups(),
+        'counts' => $matrix->counts(),
+        'baseline' => Resm\Admin\PositionMatrix::BASELINE,
+        'notice' => $notice,
+        'error' => $error,
         'back' => ['url' => $app->url('admin'), 'label' => 'Admin Menu'],
     ]);
 }
