@@ -59,6 +59,14 @@ strictly weaker and easy to get wrong. `/status` checks this on every deploy.
 `public/` into `public_html/resm/` and the rest into `~/resm-app/`, then fixes
 modes to 0755/0644.
 
+To confirm afterwards that the server is actually on the current commit, hash
+every shipped file against its URL — `public/` is copied verbatim, so a
+mismatch means the deploy has not run. The loop is in
+[docs/hosting.md](docs/hosting.md#verifying-a-deploy-from-outside--measured-2026-08-29),
+and it needs no key, which matters because `/resm/status` is 404 whenever
+`status_key` is left unset. Trunk `9e4bff1` verified clean this way on
+2026-08-29, all twenty files.
+
 ### No shell access
 
 This account has neither SSH nor cPanel Terminal, so `bin/migrate.php` and

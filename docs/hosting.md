@@ -264,3 +264,75 @@ web server cannot traverse in, and LiteSpeed declines to reveal whether the
 target exists. This cost an hour once; if a file you can see in File Manager
 404s, check the directory's mode first. Watch what modes arrive after a
 cPanel "Deploy HEAD Commit".
+
+## Verifying a deploy from outside — measured 2026-08-29
+
+Phase 7 recorded that the build sandbox could not reach
+`www.reshiftmanager.com`: the egress proxy refused the CONNECT, so deploy
+verification was handed to Adam as a list of steps. **On 2026-08-29 the host
+answered normally from the sandbox.** Network policy is a property of the
+environment, not of the app, so check before assuming either state:
+
+```
+curl -sS -o /dev/null -w "%{http_code}\n" https://www.reshiftmanager.com/resm/
+```
+
+`302` to `/resm/login` is the healthy anonymous answer.
+
+When it is reachable, a deploy can be checked exactly rather than eyeballed.
+Everything under `public/` is copied verbatim by `.cpanel.yml` — no build step
+rewrites it — so each shipped file's URL must be **byte-identical** to the
+commit:
+
+```
+for f in $(cd public && find . -type f ! -name .htaccess ! -name index.php | sed 's|^\./||'); do
+  live=$(curl -sS "https://www.reshiftmanager.com/resm/$f" | sha256sum | cut -c1-16)
+  repo=$(sha256sum "public/$f" | cut -c1-16)
+  [ "$live" = "$repo" ] && echo "ok   $f" || echo "STALE $f"
+done
+```
+
+A `STALE` line means the cPanel **Deploy HEAD Commit** has not run since that
+file changed. This is the cheapest way to settle "is the server on the current
+commit?" — and the only way that does not depend on someone reading a screen.
+It was run against trunk `9e4bff1` on 2026-08-29: all twenty files matched,
+`tarmac.svg` among them, which is what confirmed PR #20's map was live.
+
+Two doors should be shut on a running server, and both answer **404** when they
+are — the same 404 whether the key is wrong or absent, so a probe reveals
+nothing:
+
+| URL | Shut when |
+| --- | --- |
+| `/resm/setup` | `setup_key` line removed from `config.local.php` |
+| `/resm/status` | `status_key` null, and `debug` false |
+
+`/status` is the richer check when a key *is* set, since it reports migrations
+pending, the cookie path and whether code sits inside the document root — but
+leaving a key configured is a standing credential, so the shut state is the
+right resting state and the hash sweep above covers the file-copy question
+without one.
+
+The anonymous response also carries the whole session and header contract, so
+it is worth reading once after any deploy that touches `Session` or `Response`.
+Measured on 2026-08-29, all as intended:
+
+```
+set-cookie: RESMSESS=…; path=/resm/; secure; HttpOnly; SameSite=Lax
+content-security-policy: default-src 'self'; img-src 'self' data:;
+    style-src 'self'; script-src 'self'; form-action 'self';
+    frame-ancestors 'none'; base-uri 'self'
+x-content-type-options: nosniff
+referrer-policy: same-origin
+x-frame-options: DENY
+server: LiteSpeed
+```
+
+The cookie line is the one to read closely: `path=/resm/` rather than `/`, and
+all three of `secure`, `HttpOnly` and `SameSite` present. Those are four of the
+five unsafe host defaults `Session` overrides by hand, and a response header is
+the only place they can be confirmed as the browser actually receives them.
+The fifth, `use_strict_mode`, leaves no trace in a header, and as of 2026-08-29
+no test asserts it either — it is held only by the `ini_set` in `Session::start`
+and by reading that file. The same is true of the four above: the suite does not
+pin them, so this response is the only standing evidence they are right.
