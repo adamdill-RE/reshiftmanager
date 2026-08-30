@@ -5,6 +5,11 @@ Ahosting Reseller Gold, package 3000. Facts below are read from cPanel's
 some values (service state, load, disk) are point-in-time and some (versions,
 paths) only change on a host upgrade.
 
+A portable version of these facts — the account-wide platform, the constraints
+it imposes and the patterns that satisfy them, with everything RESM-specific
+factored out — is `docs/hosting-platform-scope.md`. That file is written to be
+copied into a new project's repository as its hosting scope.
+
 ## Platform — snapshot 2026-08-23
 
 | Item | Detail |
